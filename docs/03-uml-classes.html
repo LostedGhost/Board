@@ -1,0 +1,487 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LuluBoard — Diagramme de classes</title>
+<style>body{font-family:system-ui,sans-serif;max-width:1200px;margin:0 auto;padding:16px;background:#fff;color:#222}
+pre.mermaid{background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:12px;overflow-x:auto}</style>
+</head><body>
+<h1>LuluBoard — Diagramme de classes (VALIDÉ le 2026-10-08)</h1>
+<h2>Conventions de lecture</h2>
+<h2>Diagramme 1 — Compte, appareils et sécurité</h2>
+<pre class="mermaid">classDiagram
+  direction LR
+  class Compte {
+    +id : UUID
+    +email : Email
+    +nomAffichage : Texte
+    +motDePasseHash : Texte?
+    +clePubliqueVerification : Texte
+    +role : RoleCompte
+    +statut : StatutCompte
+    +emailVerifieLe : DateHeure?
+    +cleRecuperationConfirmeeLe : DateHeure?
+    +dernierRappelCleLe : DateHeure?
+    +derniereConnexionLe : DateHeure
+    +avertiInactiviteLe : DateHeure?
+    +suppressionPrevueLe : DateHeure?
+    +creeLe : DateHeure
+  }
+  class IdentiteGoogle {
+    +sujetGoogle : Texte
+    +emailGoogle : Email
+    +lieeLe : DateHeure
+  }
+  class CodeVerification {
+    +type : TypeCode
+    +codeHash : Texte
+    +nouvelEmail : Email?
+    +tentatives : Entier
+    +expireLe : DateHeure
+    +utiliseLe : DateHeure?
+  }
+  class Appareil {
+    +id : UUID
+    +nom : Texte
+    +type : TypeAppareil
+    +plateforme : Texte
+    +versionApp : Texte
+    +clePublique : Texte
+    +jetonPush : Texte?
+    +typePush : TypePush?
+    +statut : StatutAppareil
+    +ajouteLe : DateHeure
+    +derniereActiviteLe : DateHeure
+    +revoqueLe : DateHeure?
+  }
+  class Session {
+    +jetonHash : Texte
+    +derniereActiviteLe : DateHeure
+    +expireLe : DateHeure
+  }
+  class EnveloppeCle {
+    +methode : MethodeEnveloppe
+    +cleMaitreEnveloppee : Octets
+    +creeLe : DateHeure
+    +invalideeLe : DateHeure?
+  }
+  class DemandeDeverrouillage {
+    +codeAffiche : Texte
+    +statut : StatutDemande
+    +expireLe : DateHeure
+  }
+  class PreferencesCompte {
+    +theme : Theme
+    +langue : Langue
+    +fuseauHoraire : Texte
+    +retentionPressePapier : DureeConservation
+    +retentionVersions : DureeConservation
+  }
+  class PreferencesAppareil {
+    +raccourciHistorique : Texte
+    +raccourciCaptureRapide : Texte
+    +demarrageAuto : Booleen
+    +capturePressePapierEnPause : Booleen
+    +notificationsActives : Liste~CategorieNotification~
+    +verrouLocal : VerrouLocal
+  }
+
+  Compte &quot;1&quot; -- &quot;0..1&quot; IdentiteGoogle : se connecte avec
+  Compte &quot;1&quot; *-- &quot;0..*&quot; CodeVerification : reçoit
+  Compte &quot;1&quot; *-- &quot;0..*&quot; Appareil : possède (3 actifs max)
+  Appareil &quot;1&quot; *-- &quot;0..1&quot; Session : session courante
+  Compte &quot;1&quot; *-- &quot;1..*&quot; EnveloppeCle : protège sa clé maître par
+  Appareil &quot;1&quot; -- &quot;0..1&quot; EnveloppeCle : déverrouille avec
+  Appareil &quot;1&quot; *-- &quot;0..*&quot; DemandeDeverrouillage : demande l&#x27;accès
+  Appareil &quot;0..1&quot; -- &quot;0..*&quot; DemandeDeverrouillage : approuve
+  Compte &quot;1&quot; *-- &quot;1&quot; PreferencesCompte : a
+  Appareil &quot;1&quot; *-- &quot;1&quot; PreferencesAppareil : a
+
+  note for Compte &quot;A1 A1b A2 A3 A5 I4 I15 I17 I26 I27\nmotDePasseHash vide = compte Google seul (I16)&quot;
+  note for EnveloppeCle &quot;Chiffrement de bout en bout : une clé maître par compte,\nenveloppée par la clé de récupération et par chaque appareil.\nLe mot de passe sert seulement à se connecter (A3).&quot;
+  note for Appareil &quot;A4 I11 I12 · max 3 appareils au statut ACTIF&quot;
+</pre>
+<pre class="mermaid">classDiagram
+  direction LR
+  class RoleCompte {
+    &lt;&lt;enumeration&gt;&gt;
+    UTILISATEUR
+    ADMINISTRATEUR
+  }
+  class StatutCompte {
+    &lt;&lt;enumeration&gt;&gt;
+    EN_ATTENTE_VERIFICATION
+    ACTIF
+    SUSPENDU
+    SUPPRESSION_PROGRAMMEE
+  }
+  class TypeCode {
+    &lt;&lt;enumeration&gt;&gt;
+    INSCRIPTION
+    REINITIALISATION_MOT_DE_PASSE
+    CHANGEMENT_EMAIL
+  }
+  class TypeAppareil {
+    &lt;&lt;enumeration&gt;&gt;
+    WEB
+    MOBILE
+    DESKTOP
+  }
+  class StatutAppareil {
+    &lt;&lt;enumeration&gt;&gt;
+    EN_ATTENTE_DEVERROUILLAGE
+    ACTIF
+    REVOQUE
+  }
+  class MethodeEnveloppe {
+    &lt;&lt;enumeration&gt;&gt;
+    CLE_RECUPERATION
+    APPAREIL
+  }
+  class StatutDemande {
+    &lt;&lt;enumeration&gt;&gt;
+    EN_ATTENTE
+    APPROUVEE
+    REFUSEE
+    EXPIREE
+  }
+  class DureeConservation {
+    &lt;&lt;enumeration&gt;&gt;
+    INFINIE
+    J90
+    J30
+    J7
+    H24
+    H1
+    MIN30
+  }
+  class TypePush {
+    &lt;&lt;enumeration&gt;&gt;
+    FCM
+    WEB_PUSH
+  }
+  class VerrouLocal {
+    &lt;&lt;enumeration&gt;&gt;
+    AUCUN
+    CODE_PIN
+    BIOMETRIE
+  }
+  class CategorieNotification {
+    &lt;&lt;enumeration&gt;&gt;
+    RAPPELS
+    ENVOIS_APPAREILS
+    NOUVEL_APPAREIL
+    SECURITE
+  }
+</pre>
+<h2>Diagramme 2 — Éléments du Board (contenus)</h2>
+<pre class="mermaid">classDiagram
+  direction TB
+  class Element {
+    &lt;&lt;abstract&gt;&gt;
+    +id : UUID
+    +type : TypeElement
+    +cleElement : Chiffre~Cle~?
+    +epingleAccesRapide : Booleen
+    +versionSync : Entier
+    +modifieLe : DateHeure
+    +creeLe : DateHeure
+    +supprimeLe : DateHeure?
+  }
+  class EntreePressePapier {
+    +typeContenu : TypeContenuPP
+    +contenu : Chiffre~Octets~
+    +epingle : Booleen
+  }
+  class Tableau {
+    +id : UUID
+    +nom : Chiffre~Texte~
+    +ordre : Chiffre~Entier~
+  }
+  class PostIt {
+    +contenu : Chiffre~Markdown~
+    +couleurFond : Chiffre~Couleur~
+    +x : Chiffre~Reel~
+    +y : Chiffre~Reel~
+    +largeur : Chiffre~Reel~
+    +hauteur : Chiffre~Reel~
+    +ordreEmpilement : Chiffre~Entier~
+    +archive : Booleen
+  }
+  class VersionPostIt {
+    +contenuComplet : Chiffre~Octets~
+    +creeLe : DateHeure
+  }
+  class Snippet {
+    +titre : Chiffre~Texte~
+    +contenu : Chiffre~Texte~
+    +langage : Chiffre~Texte~?
+  }
+  class ListeTaches {
+    +titre : Chiffre~Texte~
+  }
+  class Tache {
+    +titre : Chiffre~Markdown~
+    +faite : Chiffre~Booleen~
+    +echeance : Chiffre~DateHeure~?
+    +priorite : Chiffre~Priorite~
+    +ordre : Chiffre~Entier~
+  }
+  class Fichier {
+    voir diagramme 3
+  }
+  class Etiquette {
+    +id : UUID
+    +nom : Chiffre~Texte~
+  }
+  class Rappel {
+    +prochaineEcheance : DateHeure
+    +recurrence : Recurrence?
+    +joursSemaine : Liste~JourSemaine~
+    +fuseauHoraire : Texte
+    +actif : Booleen
+  }
+  class Compte {
+    voir diagramme 1
+  }
+  class Appareil {
+    voir diagramme 1
+  }
+
+  Element &lt;|-- EntreePressePapier
+  Element &lt;|-- PostIt
+  Element &lt;|-- Snippet
+  Element &lt;|-- ListeTaches
+  Element &lt;|-- Tache
+  Element &lt;|-- Fichier
+
+  Compte &quot;1&quot; *-- &quot;0..*&quot; Element : possède
+  Compte &quot;1&quot; *-- &quot;0..*&quot; Tableau : possède
+  Compte &quot;1&quot; *-- &quot;0..*&quot; Etiquette : possède
+  Tableau &quot;1&quot; o-- &quot;0..*&quot; PostIt : contient
+  PostIt &quot;1&quot; *-- &quot;0..*&quot; VersionPostIt : historique
+  ListeTaches &quot;1&quot; *-- &quot;0..*&quot; Tache : contient
+  Tache &quot;0..1&quot; -- &quot;0..*&quot; Tache : sous-tâches
+  Element &quot;0..*&quot; -- &quot;0..*&quot; Etiquette : étiqueté par
+  Element &quot;0..1&quot; -- &quot;0..*&quot; Element : créé depuis
+  Element &quot;1&quot; *-- &quot;0..*&quot; Rappel : a
+  Appareil &quot;0..1&quot; -- &quot;0..*&quot; Element : auteur de la modification
+  Appareil &quot;0..1&quot; -- &quot;0..*&quot; VersionPostIt : auteur
+
+  note for Element &quot;cleElement : clé propre, enveloppée par la clé maître ;
+vide pour une Tache (elle utilise la clé de sa ListeTaches)
+G1 synchro : la dernière modification gagne (modifieLe).\nsupprimeLe = marqueur pour propager la suppression\nà tous les appareils (pas de corbeille).&quot;
+  note for PostIt &quot;C1 C2 C3 · la couleur du texte n&#x27;est pas stockée :\nelle est recalculée à partir de couleurFond (contraste ≥ 4,5:1)&quot;
+  note for Rappel &quot;F3 H2 · lisible par le serveur pour envoyer le push\nau bon moment ; le texte reste dans l&#x27;élément chiffré&quot;
+</pre>
+<pre class="mermaid">classDiagram
+  direction LR
+  class TypeElement {
+    &lt;&lt;enumeration&gt;&gt;
+    PRESSE_PAPIER
+    POST_IT
+    SNIPPET
+    LISTE_TACHES
+    TACHE
+    FICHIER
+  }
+  class TypeContenuPP {
+    &lt;&lt;enumeration&gt;&gt;
+    TEXTE
+    LIEN
+    IMAGE
+  }
+  class Priorite {
+    &lt;&lt;enumeration&gt;&gt;
+    BASSE
+    NORMALE
+    HAUTE
+  }
+  class Recurrence {
+    &lt;&lt;enumeration&gt;&gt;
+    QUOTIDIENNE
+    HEBDOMADAIRE
+    MENSUELLE
+    ANNUELLE
+  }
+  class JourSemaine {
+    &lt;&lt;enumeration&gt;&gt;
+    LUNDI
+    MARDI
+    MERCREDI
+    JEUDI
+    VENDREDI
+    SAMEDI
+    DIMANCHE
+  }
+</pre>
+<h2>Diagramme 3 — Fichiers, envois entre appareils et liens publics</h2>
+<pre class="mermaid">classDiagram
+  direction LR
+  class Element {
+    &lt;&lt;abstract&gt;&gt;
+    voir diagramme 2
+  }
+  class Fichier {
+    +nom : Chiffre~Texte~
+    +typeMime : Chiffre~Texte~
+    +tailleOctets : Entier
+    +fournisseur : FournisseurStockage
+    +statut : StatutFichier
+    +idLuluFiles : UUID?
+    +messageErreur : Texte?
+  }
+  class MorceauTelegram {
+    +index : Entier
+    +messageId : Entier
+    +fileIdTelegram : Texte
+    +tailleOctets : Entier
+    +sha256 : Texte
+  }
+  class EnvoiAppareil {
+    +id : UUID
+    +contenu : Chiffre~Octets~?
+    +statut : StatutEnvoi
+    +envoyeLe : DateHeure
+    +recupereLe : DateHeure?
+    +expireLe : DateHeure
+  }
+  class LienPublic {
+    +id : UUID
+    +jetonHash : Texte
+    +protegeParMotDePasse : Booleen
+    +selDerivation : Octets?
+    +cleElementEnveloppee : Octets?
+    +verificateurMotDePasseHash : Texte?
+    +duree : DureeConservation
+    +expireLe : DateHeure?
+    +nbTelechargements : Entier
+    +creeLe : DateHeure
+    +revoqueLe : DateHeure?
+    +desactiveParAdminLe : DateHeure?
+  }
+  class Appareil {
+    voir diagramme 1
+  }
+
+  Element &lt;|-- Fichier
+  Fichier &quot;1&quot; *-- &quot;0..*&quot; MorceauTelegram : découpé en (mode Telegram)
+  Appareil &quot;1&quot; -- &quot;0..*&quot; EnvoiAppareil : expédie
+  Appareil &quot;0..1&quot; -- &quot;0..*&quot; EnvoiAppareil : reçoit (vide = tous)
+  EnvoiAppareil &quot;0..*&quot; -- &quot;0..1&quot; Element : porte sur
+  Element &quot;1&quot; -- &quot;0..*&quot; LienPublic : partagé par
+
+  note for Fichier &quot;E1 E2 · 100 Mo max (tailleOctets lisible pour le contrôler)\nfournisseur figé à l&#x27;envoi : la variable ne touche que\nles nouveaux fichiers · suppression définitive&quot;
+  note for LienPublic &quot;E3 H4 I19 I21 · contenu en DIRECT : le lien sert la version\nactuelle de l&#x27;élément. Sa cleElement est dans le lien (après #)\nou enveloppée par le mot de passe ; jamais en clair sur le serveur.\nexpireLe vide = durée infinie&quot;
+  note for EnvoiAppareil &quot;D1 H3 · conservé 7 jours s&#x27;il n&#x27;est pas récupéré&quot;
+</pre>
+<pre class="mermaid">classDiagram
+  direction LR
+  class FournisseurStockage {
+    &lt;&lt;enumeration&gt;&gt;
+    LULUFILES
+    TELEGRAM_DIRECT
+  }
+  class StatutFichier {
+    &lt;&lt;enumeration&gt;&gt;
+    EN_FILE
+    ENVOI_EN_COURS
+    PRET
+    ECHEC
+  }
+  class StatutEnvoi {
+    &lt;&lt;enumeration&gt;&gt;
+    EN_ATTENTE
+    REMIS
+    EXPIRE
+  }
+</pre>
+<h2>Diagramme 4 — Administration et conformité</h2>
+<pre class="mermaid">classDiagram
+  direction LR
+  class Signalement {
+    +id : UUID
+    +motif : MotifSignalement
+    +commentaire : Texte?
+    +creeLe : DateHeure
+    +statut : StatutSignalement
+    +traiteLe : DateHeure?
+  }
+  class Suspension {
+    +motif : Texte
+    +debutLe : DateHeure
+    +leveeLe : DateHeure?
+  }
+  class VersionConditions {
+    +type : TypeConditions
+    +numero : Texte
+    +publieeLe : DateHeure
+    +urlTexte : URL
+  }
+  class AcceptationConditions {
+    +accepteeLe : DateHeure
+  }
+  class Annonce {
+    +messageFr : Texte
+    +messageEn : Texte
+    +debutLe : DateHeure
+    +finLe : DateHeure?
+  }
+  class DemandeSupport {
+    +emailContact : Email
+    +message : Texte
+    +infosTechniques : Texte?
+    +creeLe : DateHeure
+  }
+  class LienPublic {
+    voir diagramme 3
+  }
+  class Compte {
+    voir diagramme 1
+  }
+
+  LienPublic &quot;1&quot; -- &quot;0..*&quot; Signalement : fait l&#x27;objet de
+  Compte &quot;0..1&quot; -- &quot;0..*&quot; Signalement : traité par (admin)
+  Compte &quot;1&quot; -- &quot;0..*&quot; Suspension : subit
+  Compte &quot;1&quot; -- &quot;0..*&quot; Suspension : décidée par (admin)
+  Signalement &quot;0..1&quot; -- &quot;0..*&quot; Suspension : est à l&#x27;origine de
+  Compte &quot;1&quot; -- &quot;0..*&quot; AcceptationConditions : accepte
+  VersionConditions &quot;1&quot; -- &quot;0..*&quot; AcceptationConditions : acceptée via
+  Compte &quot;1&quot; -- &quot;0..*&quot; Annonce : publiée par (admin)
+  Compte &quot;0..1&quot; -- &quot;0..*&quot; DemandeSupport : envoie
+
+  note for DemandeSupport &quot;I22 · enregistrée ET transmise par e-mail à l&#x27;équipe&quot;
+  note for Signalement &quot;I20 I28 · l&#x27;administrateur ne voit jamais le contenu&quot;
+  note for AcceptationConditions &quot;G4 I23 · preuve du consentement (date + version)&quot;
+</pre>
+<pre class="mermaid">classDiagram
+  direction LR
+  class MotifSignalement {
+    &lt;&lt;enumeration&gt;&gt;
+    CONTENU_ILLICITE
+    ATTEINTE_DROIT_AUTEUR
+    LOGICIEL_MALVEILLANT
+    HAMECONNAGE
+    AUTRE
+  }
+  class StatutSignalement {
+    &lt;&lt;enumeration&gt;&gt;
+    OUVERT
+    CLASSE_SANS_SUITE
+    LIEN_DESACTIVE
+    COMPTE_SUSPENDU
+  }
+  class TypeConditions {
+    &lt;&lt;enumeration&gt;&gt;
+    CONDITIONS_UTILISATION
+    POLITIQUE_CONFIDENTIALITE
+  }
+</pre>
+<h2>Ce qui n&#x27;est volontairement PAS dans le modèle</h2>
+<h2>Ajouts du 2026-10-09 (imposés par le contrat d&#x27;API, validés ✅)</h2>
+<h2>Décisions de modélisation</h2>
+<p><em>Source : docs/02-uml-cas-utilisation.md (tableau des acteurs et points à valider dans le fichier Markdown).</em></p>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+mermaid.initialize({startOnLoad:false, theme:'default', flowchart:{htmlLabels:true}});
+try { await mermaid.run({querySelector:'pre.mermaid'}); window.__ok = true; }
+catch(e){ window.__err = String(e); document.body.insertAdjacentHTML('afterbegin','<p style="color:red">'+e+'</p>'); }
+</script></body></html>

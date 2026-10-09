@@ -1,0 +1,23 @@
+# Secrets
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Outils
+.idea/
+.vscode/
+*.log
+
+# Flutter (prototype et app)
+.dart_tool/
+build/
+
+# Script de création de la base locale (contient le mot de passe de dev)
+backend/scripts/creer_base_dev.sql

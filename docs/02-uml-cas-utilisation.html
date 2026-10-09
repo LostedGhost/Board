@@ -1,0 +1,263 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LuluBoard — Cas d'utilisation UML</title>
+<style>body{font-family:system-ui,sans-serif;max-width:1200px;margin:0 auto;padding:16px;background:#fff;color:#222}
+pre.mermaid{background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:12px;overflow-x:auto}</style>
+</head><body>
+<h1>LuluBoard — Diagramme de cas d&#x27;utilisation (BROUILLON, NON VALIDÉ)</h1>
+<h2>Acteurs</h2>
+<h2>Diagramme 0 — Vue d&#x27;ensemble</h2>
+<pre class="mermaid">flowchart LR
+  V([&quot;👤 Visiteur&quot;])
+  U([&quot;👤 Utilisateur inscrit&quot;])
+  R([&quot;👤 Destinataire d&#x27;un lien&quot;])
+  AD([&quot;👤 Administrateur&quot;])
+  T([&quot;⏱ «système» Planificateur&quot;])
+  EXT([&quot;⚙ «systèmes» Google, e-mail, stockage, push, presse-papier OS&quot;])
+
+  subgraph LB[&quot;LuluBoard&quot;]
+    P1([&quot;Accès, compte et sécurité&lt;br/&gt;A, I.1, I.3, I.6&quot;])
+    P2([&quot;Contenus : presse-papier, post-it,&lt;br/&gt;snippets, tâches, rappels&lt;br/&gt;B, C, F&quot;])
+    P3([&quot;Partage et fichiers&lt;br/&gt;D, E, I.4&quot;])
+    P4([&quot;Passerelles et usage quotidien&lt;br/&gt;G1, G2, H, I.2&quot;])
+    P5([&quot;Administration et conformité&lt;br/&gt;G3, G4, I.5, I.7&quot;])
+  end
+
+  U --&gt;|hérite de| V
+  V --- P1
+  V --- P2
+  V --- P4
+  U --- P3
+  U --- P5
+  R --- P3
+  AD --- P5
+  T --- P1
+  T --- P2
+  T --- P3
+  P1 --- EXT
+  P2 --- EXT
+  P3 --- EXT
+</pre>
+<h2>Diagramme 1 — Accès, compte et sécurité</h2>
+<pre class="mermaid">flowchart LR
+  V([&quot;👤 Visiteur&quot;])
+  U([&quot;👤 Utilisateur inscrit&quot;])
+  T([&quot;⏱ Planificateur&quot;])
+  G([&quot;⚙ «système» Google&quot;])
+  M([&quot;⚙ «système» Service e-mail&quot;])
+
+  subgraph SYS[&quot;LuluBoard — Accès, compte et sécurité&quot;]
+    I1([&quot;I1 Découvrir la plateforme&quot;])
+    A0([&quot;A0 Utiliser sans compte&quot;])
+    I2([&quot;I2 Premier lancement&quot;])
+    A1([&quot;A1 S&#x27;inscrire par e-mail&quot;])
+    A1b([&quot;A1b S&#x27;inscrire / se connecter avec Google&quot;])
+    I3([&quot;I3 Conserver ses données locales à l&#x27;inscription&quot;])
+    KEY([&quot;A1 / I4 / I15 Sauvegarder ou régénérer&lt;br/&gt;sa clé de récupération&quot;])
+    A2([&quot;A2 Se connecter / se déconnecter&quot;])
+    A3([&quot;A3 Réinitialiser son mot de passe&quot;])
+    DEV([&quot;A4 / I11 / I12 Gérer ses appareils&lt;br/&gt;ajouter, déverrouiller, révoquer&quot;])
+    I13([&quot;I13 / I14 Changer mot de passe ou e-mail&quot;])
+    I16([&quot;I16 Lier / délier Google&quot;])
+    I18([&quot;I18 Verrouiller l&#x27;app localement&quot;])
+    DEL([&quot;A5 / I26 Supprimer son compte&lt;br/&gt;ou annuler la suppression&quot;])
+    A6([&quot;A6 Exporter ses données&quot;])
+    I17([&quot;I17 Expirer une session inactive&quot;])
+    I27([&quot;I27 Supprimer un compte inactif 12 mois&quot;])
+  end
+
+  U --&gt;|hérite de| V
+  V --- I1
+  V --- A0
+  V --- I2
+  V --- A1
+  V --- A1b
+  U --- A2
+  U --- A3
+  U --- KEY
+  U --- DEV
+  U --- I13
+  U --- I16
+  U --- I18
+  U --- DEL
+  U --- A6
+  T --- I17
+  T --- I27
+
+  A1 -.-&gt;|«include»| KEY
+  A1b -.-&gt;|«include»| KEY
+  I3 -.-&gt;|«extend»| A1
+  DEV -.-&gt;|«include» si déverrouillage par clé| KEY
+  A1 --- M
+  A3 --- M
+  I13 --- M
+  DEL --- M
+  I27 --- M
+  A1b --- G
+  I16 --- G
+</pre>
+<h2>Diagramme 2 — Contenus : presse-papier, post-it, snippets, tâches, rappels</h2>
+<pre class="mermaid">flowchart LR
+  V([&quot;👤 Visiteur&quot;])
+  OS([&quot;⚙ «système» Presse-papier OS&quot;])
+  T([&quot;⏱ Planificateur&quot;])
+  PU([&quot;⚙ «système» Notifications push&quot;])
+
+  subgraph SYS[&quot;LuluBoard — Contenus&quot;]
+    B1([&quot;B1 Capturer automatiquement les copies&quot;])
+    B2([&quot;B2 Ajouter manuellement au presse-papier&quot;])
+    B3([&quot;B3 Consulter, rechercher, recopier&quot;])
+    B4([&quot;B4 Épingler, supprimer, régler la rétention&quot;])
+    PURGE([&quot;B4 Purger les entrées expirées&quot;])
+    C1([&quot;C1 Créer un post-it&quot;])
+    C2([&quot;C2 Organiser le tableau libre&quot;])
+    TOP([&quot;C2 Afficher un post-it au premier plan&quot;])
+    H12([&quot;H12 Gérer les tableaux&quot;])
+    C3([&quot;C3 Modifier, archiver, supprimer&quot;])
+    VER([&quot;C3 Consulter / restaurer une version&quot;])
+    F1([&quot;F1 Gérer ses snippets&quot;])
+    F2([&quot;F2 Gérer ses listes de tâches&quot;])
+    F3([&quot;F3 Programmer un rappel récurrent ou non&quot;])
+    FIRE([&quot;F3 Déclencher un rappel&quot;])
+  end
+
+  V --- B2
+  V --- B3
+  V --- B4
+  V --- C1
+  V --- C2
+  V --- H12
+  V --- C3
+  V --- F1
+  V --- F2
+  V --- F3
+  OS --- B1
+  T --- PURGE
+  T --- FIRE
+  FIRE --- PU
+
+  TOP -.-&gt;|«extend» desktop| C2
+  VER -.-&gt;|«extend»| C3
+</pre>
+<h2>Diagramme 3 — Partage et fichiers</h2>
+<pre class="mermaid">flowchart LR
+  U([&quot;👤 Utilisateur inscrit&quot;])
+  R([&quot;👤 Destinataire d&#x27;un lien&quot;])
+  T([&quot;⏱ Planificateur&quot;])
+  ST([&quot;⚙ «système» Stockage&lt;br/&gt;LuluFiles ou Telegram&quot;])
+  PU([&quot;⚙ «système» Notifications push&quot;])
+
+  subgraph SYS[&quot;LuluBoard — Partage et fichiers&quot;]
+    D1([&quot;D1 / H3 Envoyer un élément à un appareil&quot;])
+    E1([&quot;E1 Téléverser un fichier&quot;])
+    E2([&quot;E2 Télécharger / supprimer un fichier&quot;])
+    E3([&quot;E3 / H4 Créer un lien public&lt;br/&gt;fichier, post-it, snippet, liste&quot;])
+    PWD([&quot;E3 Protéger le lien par mot de passe&quot;])
+    I21([&quot;I21 Suivre, révoquer, prolonger ses liens&quot;])
+    EXP([&quot;E3 Expirer un lien&quot;])
+    I19([&quot;I19 Ouvrir un lien public&quot;])
+    I19p([&quot;I19 Saisir le mot de passe du lien&quot;])
+    I20([&quot;I20 Signaler un lien&quot;])
+  end
+
+  U --- D1
+  U --- E1
+  U --- E2
+  U --- E3
+  U --- I21
+  R --- I19
+  R --- I20
+  T --- EXP
+
+  PWD -.-&gt;|«extend»| E3
+  I19p -.-&gt;|«extend» si protégé| I19
+  E1 --- ST
+  E2 --- ST
+  I19 --- ST
+  D1 --- PU
+</pre>
+<h2>Diagramme 4 — Passerelles et usage quotidien</h2>
+<pre class="mermaid">flowchart LR
+  V([&quot;👤 Visiteur&quot;])
+  U([&quot;👤 Utilisateur inscrit&quot;])
+
+  subgraph SYS[&quot;LuluBoard — Passerelles et usage quotidien&quot;]
+    H1([&quot;H1 Transformer un élément&quot;])
+    H5([&quot;H5 Glisser-déposer entre modules&quot;])
+    H2([&quot;H2 Attacher un rappel à un élément&quot;])
+    H6([&quot;H6 Mentionner un élément&quot;])
+    H7([&quot;H7 Étiqueter un élément&quot;])
+    H8([&quot;H8 Épingler en accès rapide&quot;])
+    H9([&quot;H9 Capture rapide&quot;])
+    H10([&quot;H10 Annuler la dernière action&quot;])
+    H11([&quot;H11 Dupliquer un élément&quot;])
+    G2([&quot;G2 Rechercher dans tout le Board&quot;])
+    I8([&quot;I8 Personnaliser l&#x27;interface&quot;])
+    I9([&quot;I9 Démarrage automatique desktop&quot;])
+    I10([&quot;I10 Mettre à jour l&#x27;application&quot;])
+    G1([&quot;G1 Synchroniser, y compris après hors ligne&quot;])
+    I5([&quot;I5 Voir l&#x27;état de synchronisation&quot;])
+    I6([&quot;I6 Être informé d&#x27;un conflit résolu&quot;])
+    I7([&quot;I7 Gérer ses notifications&quot;])
+  end
+
+  U --&gt;|hérite de| V
+  V --- H1
+  V --- H5
+  V --- H2
+  V --- H6
+  V --- H7
+  V --- H8
+  V --- H9
+  V --- H10
+  V --- H11
+  V --- G2
+  V --- I8
+  V --- I9
+  V --- I10
+  U --- G1
+  U --- I5
+  U --- I7
+
+  H5 -.-&gt;|«include»| H1
+  I6 -.-&gt;|«extend» si conflit| G1
+</pre>
+<h2>Diagramme 5 — Administration et conformité</h2>
+<pre class="mermaid">flowchart LR
+  U([&quot;👤 Utilisateur inscrit&quot;])
+  AD([&quot;👤 Administrateur&quot;])
+  M([&quot;⚙ «système» Service e-mail&quot;])
+
+  subgraph SYS[&quot;LuluBoard — Administration et conformité&quot;]
+    G4([&quot;G4 Donner son consentement&quot;])
+    I23([&quot;I23 Accepter les nouvelles conditions&quot;])
+    I22([&quot;I22 Obtenir de l&#x27;aide / contacter&quot;])
+    I24([&quot;I24 Être informé d&#x27;une suspension et contester&quot;])
+    I29([&quot;G3 / I29 Superviser la plateforme&quot;])
+    I28([&quot;G3 / I28 Traiter un signalement&quot;])
+    OFF([&quot;I28 Désactiver un lien&quot;])
+    SUS([&quot;G3 / I28 Suspendre un compte&quot;])
+    I30([&quot;I30 Publier une annonce&quot;])
+  end
+
+  U --- G4
+  U --- I23
+  U --- I22
+  U --- I24
+  AD --- I29
+  AD --- I28
+  AD --- SUS
+  AD --- I30
+
+  OFF -.-&gt;|«extend»| I28
+  SUS -.-&gt;|«extend»| I28
+  I22 --- M
+</pre>
+<h2>Points déduits à valider</h2>
+<p><em>Source : docs/02-uml-cas-utilisation.md (tableau des acteurs et points à valider dans le fichier Markdown).</em></p>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+mermaid.initialize({startOnLoad:false, theme:'default', flowchart:{htmlLabels:true}});
+try { await mermaid.run({querySelector:'pre.mermaid'}); window.__ok = true; }
+catch(e){ window.__err = String(e); document.body.insertAdjacentHTML('afterbegin','<p style="color:red">'+e+'</p>'); }
+</script></body></html>

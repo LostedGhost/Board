@@ -1,0 +1,55 @@
+openapi: 3.0.3
+info:
+  title: LuluBoard API
+  version: 0.1.0
+paths:
+  /api/v1/health:
+    get:
+      operationId: api_v1_health_retrieve
+      tags:
+      - api
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sante'
+          description: ''
+components:
+  schemas:
+    Sante:
+      type: object
+      properties:
+        statut:
+          $ref: '#/components/schemas/StatutEnum'
+        version:
+          type: string
+        verifications:
+          $ref: '#/components/schemas/Verifications'
+      required:
+      - statut
+      - verifications
+      - version
+    StatutEnum:
+      enum:
+      - ok
+      - degrade
+      type: string
+      description: |-
+        * `ok` - ok
+        * `degrade` - degrade
+    Verifications:
+      type: object
+      properties:
+        base:
+          type: boolean
+        redis:
+          type: boolean
+        stockage:
+          type: boolean
+      required:
+      - base
+      - redis
+      - stockage
