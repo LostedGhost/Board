@@ -70,6 +70,9 @@ uv run python manage.py spectacular --file ../docs/openapi.yaml
 | 2.2 | `POST /api/v1/auth/mot-de-passe/reinitialiser` | ✅ livré, testé |
 | 2.3 | `GET /appareils`, `PATCH`/`DELETE /appareils/{id}`, `GET /appareils/courant/enveloppe`, `POST /appareils/courant/deverrouillage`, `GET /deverrouillages/en-attente`, `POST /deverrouillages/{id}/approuver`, `POST /deverrouillages/{id}/refuser`, `GET`/`PUT /compte/enveloppe-recuperation`, `POST /appareils/courant/deverrouiller-par-recuperation` | ✅ livré, testé |
 | 2.4 | `GET`/`PATCH`/`DELETE /compte`, `POST /compte/mot-de-passe`, `POST /compte/email`, `POST /compte/email/verifier`, `POST`/`DELETE /compte/google`, `GET`/`PUT /compte/preferences`, `GET`/`PUT /appareils/courant/preferences`, `GET /conditions/actuelles`, `POST /conditions/accepter` | ✅ livré, testé |
+| 2.5 | `GET /synchro/changements`, `POST /synchro/envoyer` | ✅ livré, testé |
+| 2.6 | WebSocket `/api/v1/ws` | ✅ livré, testé |
+| 2.7 | `POST /fichiers`, `GET /fichiers/{id}`, `GET /fichiers/{id}/acces`, `GET /fichiers/{id}/contenu`, `POST /fichiers/{id}/reessayer` | ✅ livré, testé |
 
 ### `GET /api/v1/health` (public)
 
@@ -150,3 +153,24 @@ Revue de sécurité : contrôle d'accès par compte sur chaque identifiant (404 
 - Suppression : statut `SUPPRESSION_PROGRAMMEE` pendant 30 jours ; se reconnecter l'annule (lot 2.2) ; l'effacement définitif est fait par une tâche planifiée (lot « tâches »).
 - Préférences d'appareil : le jeton push est accepté en écriture seulement ; `SECURITE` reste toujours active.
 - Nouvelles conditions publiées → toutes les routes 🔐 répondent `403 conditions_a_accepter`, sauf `GET`/`PATCH`/`DELETE /compte` et `/conditions/*`.
+
+## Lot 2.5 — Synchronisation
+
+- Un compteur de version par compte, verrouillé pendant l'application d'un lot : les envois concurrents d'un même compte sont sérialisés.
+- « La dernière modification gagne » (`modifieLe`) ; une suppression est définitive et efface le contenu du serveur.
+- Le serveur archive l'ancienne version d'un post-it à chaque modification, ainsi que la version perdante d'un conflit (événement `conflit`).
+- Contrôles : identifiant d'un autre compte → `rejete/introuvable` (sans rien révéler) ; type immuable ; un fichier ne se crée jamais par la synchro ; presse-papier limité à 100 Ko (texte) ou 5 Mo (image), autres éléments à 10 Mo.
+
+## Lot 2.6 — WebSocket
+
+`ws(s)://<hôte>/api/v1/ws` : envoyer `{"type":"auth","jeton":"…"}` dans les 10 s → `{"type":"pret"}`, puis réception des événements du contrat (sans contenu). `ping` → `pong`.
+
+## Lot 2.7 — Fichiers
+
+- Le client envoie les octets **déjà chiffrés** ; le serveur les écrit dans un fichier temporaire, crée l'élément `FICHIER` (visible par la synchro), puis une tâche Celery les transfère.
+- **Telegram direct** : morceaux de 18 Mo (`sendDocument`), SHA-256 par morceau vérifié à la relecture, reprise au premier morceau manquant en cas d'échec.
+- **LuluFiles** : envoi, attente du statut `ready`, puis lien signé (si `LULUFILES_CORS_OUVERT=true`) ou flux via notre serveur.
+- `GET /fichiers/{id}/contenu` prend en charge `Range` (`206`, `416`).
+- Supprimer l'élément (synchro) efface les morceaux chez le fournisseur.
+
+Lancer un worker en production : `uv run celery -A config worker -l info` (et `beat` pour les tâches planifiées).

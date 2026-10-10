@@ -23,3 +23,12 @@
 | D16 | 10/10 | Notifications | Toutes les catégories actives par défaut ; `SECURITE` est toujours réactivée. | I7. |
 | D17 | 10/10 | Jeton push | Envoyé par `PUT /appareils/courant/preferences`, jamais renvoyé dans les réponses. | C'est un secret de l'appareil. |
 | D18 | 10/10 | Durée « 1 h » | Refusée pour le presse-papier, acceptée pour les versions. | Respect exact de B4 et de C3. |
+| D19 | 10/10 | Suppression synchronisée | Définitive : un élément supprimé ne peut pas être recréé par une modification plus récente ; son contenu est effacé du serveur. | Pas de corbeille (décision validée) ; effacement réel. |
+| D20 | 10/10 | Historique des post-it | Créé par le serveur à chaque modification acceptée, et pour le perdant d'un conflit ; le client ne pousse pas de versions. | Une seule source de vérité ; rien n'est perdu (C3, I6). |
+| D21 | 10/10 | Rattachements (parent, étiquette, rappel) | Identifiants simples, sans clé étrangère. | Un lot hors ligne peut arriver dans n'importe quel ordre. |
+| D22 | 10/10 | Celery en local | Exécution immédiate dans le processus web (`CELERY_TASK_ALWAYS_EAGER=true`) ; worker réel en production. | Pas de worker à lancer pendant le développement. |
+| D23 | 10/10 | Téléchargements en mode LuluFiles | Passent par notre serveur tant que `LULUFILES_CORS_OUVERT=false`. | Le MVP fonctionne sans attendre la modification CORS de LuluFiles. |
+| D24 | 10/10 | Tailles maximales | Corps JSON : 12 Mo ; envoi de fichier : 101 Mo ; lot de synchronisation : 500 changements. | Refus précoce des abus, avant lecture du corps. |
+| D25 | 10/10 | Type d'un élément | Immuable : une transformation (H1) crée un nouvel élément. | Cohérent avec la règle « créer une copie par défaut ». |
+| D26 | 10/10 | Fichier supprimé | Effacé chez le fournisseur ; un message Telegram de plus de 48 h reste dans le canal, mais chiffré et sans clé. | Limite de Telegram ; effacement cryptographique. |
+| D27 | 10/10 | WebSocket | Route `/api/v1/ws` ; jeton dans le premier message ; fermeture `4401` (authentification) et `4403` (appareil révoqué). | Le jeton ne doit pas apparaître dans les URL. |

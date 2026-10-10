@@ -554,6 +554,111 @@ paths:
                 items:
                   $ref: '#/components/schemas/Demande'
           description: ''
+  /api/v1/fichiers:
+    post:
+      operationId: fichiers_create
+      tags:
+      - fichiers
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Televersement'
+        required: true
+      security:
+      - session: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fichier'
+          description: ''
+  /api/v1/fichiers/{fichier_id}:
+    get:
+      operationId: fichiers_retrieve
+      parameters:
+      - in: path
+        name: fichier_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fichiers
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fichier'
+          description: ''
+  /api/v1/fichiers/{fichier_id}/acces:
+    get:
+      operationId: fichiers_acces_retrieve
+      parameters:
+      - in: path
+        name: fichier_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fichiers
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccesFichier'
+          description: ''
+  /api/v1/fichiers/{fichier_id}/contenu:
+    get:
+      operationId: fichiers_contenu_retrieve
+      parameters:
+      - in: path
+        name: fichier_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fichiers
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/fichiers/{fichier_id}/reessayer:
+    post:
+      operationId: fichiers_reessayer_create
+      parameters:
+      - in: path
+        name: fichier_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fichiers
+      security:
+      - session: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fichier'
+          description: ''
   /api/v1/health:
     get:
       operationId: health_retrieve
@@ -568,6 +673,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/Sante'
           description: ''
+  /api/v1/synchro/changements:
+    get:
+      operationId: synchro_changements_retrieve
+      parameters:
+      - in: query
+        name: depuis
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: limite
+        schema:
+          type: integer
+      tags:
+      - synchro
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Changements'
+          description: ''
+  /api/v1/synchro/envoyer:
+    post:
+      operationId: synchro_envoyer_create
+      tags:
+      - synchro
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Envoi'
+        required: true
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultatEnvoi'
+          description: ''
 components:
   schemas:
     AcceptationConditions:
@@ -580,6 +729,16 @@ components:
             format: uuid
       required:
       - versionIds
+    AccesFichier:
+      type: object
+      properties:
+        mode:
+          type: string
+        url:
+          type: string
+      required:
+      - mode
+      - url
     Appareil:
       type: object
       properties:
@@ -601,7 +760,7 @@ components:
           type: string
         statut:
           allOf:
-          - $ref: '#/components/schemas/AppareilStatutEnum'
+          - $ref: '#/components/schemas/StatutAppareil'
           readOnly: true
         ajouteLe:
           type: string
@@ -660,16 +819,6 @@ components:
       oneOf:
       - $ref: '#/components/schemas/AppareilNouveau'
       - $ref: '#/components/schemas/AppareilExistant'
-    AppareilStatutEnum:
-      enum:
-      - EN_ATTENTE_DEVERROUILLAGE
-      - ACTIF
-      - REVOQUE
-      type: string
-      description: |-
-        * `EN_ATTENTE_DEVERROUILLAGE` - En Attente Deverrouillage
-        * `ACTIF` - Actif
-        * `REVOQUE` - Revoque
     Approbation:
       type: object
       properties:
@@ -682,6 +831,28 @@ components:
       required:
       - cleMaitreEnveloppee
       - codeAffiche
+    Changement:
+      type: object
+      properties:
+        entite:
+          $ref: '#/components/schemas/EntiteEnum'
+        id:
+          type: string
+          format: uuid
+        modifieLe:
+          type: string
+          format: date-time
+        supprimeLe:
+          type: string
+          format: date-time
+          nullable: true
+        donnees:
+          type: object
+          additionalProperties: {}
+      required:
+      - entite
+      - id
+      - modifieLe
     ChangementEmail:
       type: object
       properties:
@@ -711,6 +882,22 @@ components:
           default: false
       required:
       - nouveauMotDePasse
+    Changements:
+      type: object
+      properties:
+        versionCourante:
+          type: integer
+        changements:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        encore:
+          type: boolean
+      required:
+      - changements
+      - encore
+      - versionCourante
     ClesInitiales:
       type: object
       properties:
@@ -753,7 +940,7 @@ components:
           readOnly: true
         statut:
           allOf:
-          - $ref: '#/components/schemas/Statut71aEnum'
+          - $ref: '#/components/schemas/StatutCompte'
           readOnly: true
         aMotDePasse:
           type: boolean
@@ -799,7 +986,7 @@ components:
           readOnly: true
         statut:
           allOf:
-          - $ref: '#/components/schemas/Statut71aEnum'
+          - $ref: '#/components/schemas/StatutCompte'
           readOnly: true
         aMotDePasse:
           type: boolean
@@ -900,6 +1087,40 @@ components:
       - expireLe
       - id
       - statut
+    DureeConservation:
+      enum:
+      - INFINIE
+      - J90
+      - J30
+      - J7
+      - H24
+      - H1
+      - MIN30
+      type: string
+      description: |-
+        * `INFINIE` - Infinie
+        * `J90` - J90
+        * `J30` - J30
+        * `J7` - J7
+        * `H24` - H24
+        * `H1` - H1
+        * `MIN30` - Min30
+    EntiteEnum:
+      enum:
+      - element
+      - tableau
+      - etiquette
+      - element_etiquette
+      - rappel
+      - version_post_it
+      type: string
+      description: |-
+        * `element` - element
+        * `tableau` - tableau
+        * `etiquette` - etiquette
+        * `element_etiquette` - element_etiquette
+        * `rappel` - rappel
+        * `version_post_it` - version_post_it
     Enveloppe:
       type: object
       properties:
@@ -918,6 +1139,63 @@ components:
       required:
       - cleMaitreEnveloppee
       - defi
+    Envoi:
+      type: object
+      properties:
+        changements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Changement'
+      required:
+      - changements
+    Fichier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        statut:
+          allOf:
+          - $ref: '#/components/schemas/FichierStatutEnum'
+          readOnly: true
+        tailleOctets:
+          type: integer
+        fournisseur:
+          allOf:
+          - $ref: '#/components/schemas/FournisseurEnum'
+          readOnly: true
+        messageErreur:
+          type: string
+        creeLe:
+          type: string
+          format: date-time
+      required:
+      - creeLe
+      - fournisseur
+      - id
+      - messageErreur
+      - statut
+      - tailleOctets
+    FichierStatutEnum:
+      enum:
+      - EN_FILE
+      - ENVOI_EN_COURS
+      - PRET
+      - ECHEC
+      type: string
+      description: |-
+        * `EN_FILE` - En File
+        * `ENVOI_EN_COURS` - Envoi En Cours
+        * `PRET` - Pret
+        * `ECHEC` - Echec
+    FournisseurEnum:
+      enum:
+      - LULUFILES
+      - TELEGRAM_DIRECT
+      type: string
+      description: |-
+        * `LULUFILES` - Lulufiles
+        * `TELEGRAM_DIRECT` - Telegram Direct
     Google:
       type: object
       properties:
@@ -1086,9 +1364,9 @@ components:
           type: string
           maxLength: 64
         retentionPressePapier:
-          $ref: '#/components/schemas/RetentionPressePapierEnum'
+          $ref: '#/components/schemas/DureeConservation'
         retentionVersions:
-          $ref: '#/components/schemas/RetentionVersionsEnum'
+          $ref: '#/components/schemas/DureeConservation'
       required:
       - fuseauHoraire
       - langue
@@ -1171,42 +1449,19 @@ components:
       - appareil
       - compte
       - session
-    RetentionPressePapierEnum:
-      enum:
-      - INFINIE
-      - J90
-      - J30
-      - J7
-      - H24
-      - H1
-      - MIN30
-      type: string
-      description: |-
-        * `INFINIE` - Infinie
-        * `J90` - J90
-        * `J30` - J30
-        * `J7` - J7
-        * `H24` - H24
-        * `H1` - H1
-        * `MIN30` - Min30
-    RetentionVersionsEnum:
-      enum:
-      - INFINIE
-      - J90
-      - J30
-      - J7
-      - H24
-      - H1
-      - MIN30
-      type: string
-      description: |-
-        * `INFINIE` - Infinie
-        * `J90` - J90
-        * `J30` - J30
-        * `J7` - J7
-        * `H24` - H24
-        * `H1` - H1
-        * `MIN30` - Min30
+    ResultatEnvoi:
+      type: object
+      properties:
+        versionCourante:
+          type: integer
+        resultats:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - resultats
+      - versionCourante
     RoleEnum:
       enum:
       - UTILISATEUR
@@ -1247,7 +1502,17 @@ components:
       required:
       - expireLe
       - jeton
-    Statut71aEnum:
+    StatutAppareil:
+      enum:
+      - EN_ATTENTE_DEVERROUILLAGE
+      - ACTIF
+      - REVOQUE
+      type: string
+      description: |-
+        * `EN_ATTENTE_DEVERROUILLAGE` - En Attente Deverrouillage
+        * `ACTIF` - Actif
+        * `REVOQUE` - Revoque
+    StatutCompte:
       enum:
       - EN_ATTENTE_VERIFICATION
       - ACTIF
@@ -1259,6 +1524,17 @@ components:
         * `ACTIF` - Actif
         * `SUSPENDU` - Suspendu
         * `SUPPRESSION_PROGRAMMEE` - Suppression Programmee
+    Televersement:
+      type: object
+      properties:
+        metadonnees:
+          type: string
+        fichier:
+          type: string
+          format: uri
+      required:
+      - fichier
+      - metadonnees
     ThemeEnum:
       enum:
       - CLAIR

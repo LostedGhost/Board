@@ -42,6 +42,9 @@ INSTALLED_APPS = [
     "apps.comptes",
     "apps.appareils",
     "apps.conformite",
+    "apps.elements",
+    "apps.synchro",
+    "apps.fichiers",
 ]
 
 AUTH_USER_MODEL = "comptes.Compte"
@@ -49,6 +52,7 @@ AUTH_USER_MODEL = "comptes.Compte"
 MIDDLEWARE = [
     "commun.middleware.RequestIdMiddleware",
     "commun.version_app.VersionAppMiddleware",
+    "commun.taille.TailleRequeteMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -111,6 +115,18 @@ LULUFILES_BASE_URL = env("LULUFILES_BASE_URL", "https://lulufiles-api.onrender.c
 LULUFILES_API_KEY = env("LULUFILES_API_KEY", "")
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHANNEL_ID = env("TELEGRAM_CHANNEL_ID", "")
+# Tant que LuluFiles n'autorise pas l'origine LuluBoard en CORS, les fichiers passent par notre serveur (D23).
+LULUFILES_CORS_OUVERT = env_bool("LULUFILES_CORS_OUVERT", False)
+FICHIERS_DOSSIER_TEMPORAIRE = env("FICHIERS_DOSSIER_TEMPORAIRE", "")
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # au-delà, les envois passent par un fichier temporaire
+
+# Celery : en local, exécution immédiate dans le processus web (pas de worker à lancer, D22).
+CELERY_BROKER_URL = REDIS_URL
+CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TIMEZONE = "UTC"
 
 # E-mails : console en local ; fournisseur gratuit à choisir à l'étape 8.
 EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
@@ -146,6 +162,9 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "TypeAppareil": "apps.appareils.models.TypeAppareil",
         "TypeCode": "apps.comptes.models.TypeCode",
+        "DureeConservation": "apps.comptes.models.DureeConservation",
+        "StatutCompte": "apps.comptes.models.StatutCompte",
+        "StatutAppareil": "apps.appareils.models.StatutAppareil",
     },
 }
 

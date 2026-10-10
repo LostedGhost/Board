@@ -7,4 +7,6 @@ urlpatterns = [
     path("api/v1/", include("apps.comptes.urls")),
     path("api/v1/", include("apps.appareils.urls")),
     path("api/v1/", include("apps.comptes.urls_compte")),
+    path("api/v1/", include("apps.synchro.urls")),
+    path("api/v1/", include("apps.fichiers.urls")),
 ]
