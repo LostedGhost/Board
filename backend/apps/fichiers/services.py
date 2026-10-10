@@ -17,7 +17,7 @@ from apps.synchro.services import _Compteur, apres_suppression_element
 from commun.erreurs import ErreurApi
 from commun.evenements import publier
 
-TAILLE_MAX_FICHIER = 100 * 1024 * 1024 + stockage.TAILLE_MORCEAU // 1024  # 100 Mo + surcoût du chiffrement par blocs
+TAILLE_MAX_FICHIER = 100 * 1024 * 1024 + 64 * 1024  # 100 Mo + surcoût de secretstream (docs/07, §5)
 
 
 def dossier_temporaire():

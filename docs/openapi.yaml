@@ -3,6 +3,22 @@ info:
   title: LuluBoard API
   version: 0.1.0
 paths:
+  /api/v1/annonces/actives:
+    get:
+      operationId: annonces_actives_list
+      tags:
+      - annonces
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Annonce'
+          description: ''
   /api/v1/appareils:
     get:
       operationId: appareils_list
@@ -554,6 +570,79 @@ paths:
                 items:
                   $ref: '#/components/schemas/Demande'
           description: ''
+  /api/v1/envois:
+    post:
+      operationId: envois_create
+      tags:
+      - envois
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnvoiCreation'
+      security:
+      - session: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envoi'
+          description: ''
+  /api/v1/envois/{envoi_id}/recupere:
+    post:
+      operationId: envois_recupere_create
+      parameters:
+      - in: path
+        name: envoi_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - envois
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/envois/recus:
+    get:
+      operationId: envois_recus_list
+      parameters:
+      - in: query
+        name: statut
+        schema:
+          type: string
+      tags:
+      - envois
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Envoi'
+          description: ''
+  /api/v1/export:
+    get:
+      operationId: export_retrieve
+      description: 'A6 : toutes les données CHIFFRÉES du compte ; l''app les déchiffre
+        et assemble l''export en local.'
+      tags:
+      - export
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Export'
+          description: ''
   /api/v1/fichiers:
     post:
       operationId: fichiers_create
@@ -673,6 +762,194 @@ paths:
               schema:
                 $ref: '#/components/schemas/Sante'
           description: ''
+  /api/v1/liens:
+    get:
+      operationId: liens_list
+      tags:
+      - liens
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lien'
+          description: ''
+    post:
+      operationId: liens_create
+      tags:
+      - liens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LienCreation'
+        required: true
+      security:
+      - session: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LienCree'
+          description: ''
+  /api/v1/liens/{lien_id}:
+    patch:
+      operationId: liens_partial_update
+      parameters:
+      - in: path
+        name: lien_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - liens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProlongation'
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lien'
+          description: ''
+    delete:
+      operationId: liens_destroy
+      parameters:
+      - in: path
+        name: lien_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - liens
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/public/liens/{jeton}:
+    get:
+      operationId: public_liens_retrieve
+      parameters:
+      - in: path
+        name: jeton
+        schema:
+          type: string
+        required: true
+      tags:
+      - public
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LienPublicConsultation'
+          description: ''
+  /api/v1/public/liens/{jeton}/deverrouiller:
+    post:
+      operationId: public_liens_deverrouiller_create
+      parameters:
+      - in: path
+        name: jeton
+        schema:
+          type: string
+        required: true
+      tags:
+      - public
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Deverrouillage'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/public/liens/{jeton}/fichier:
+    get:
+      operationId: public_liens_fichier_retrieve
+      parameters:
+      - in: path
+        name: jeton
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: t
+        schema:
+          type: string
+      tags:
+      - public
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/public/liens/{jeton}/signalements:
+    post:
+      operationId: public_liens_signalements_create
+      parameters:
+      - in: path
+        name: jeton
+        schema:
+          type: string
+        required: true
+      tags:
+      - public
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignalementCreation'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          description: No response body
+  /api/v1/support:
+    post:
+      operationId: support_create
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Support'
+        required: true
+      security:
+      - session: []
+      - {}
+      responses:
+        '201':
+          description: No response body
   /api/v1/synchro/changements:
     get:
       operationId: synchro_changements_retrieve
@@ -706,7 +983,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Envoi'
+              $ref: '#/components/schemas/LotChangements'
         required: true
       security:
       - session: []
@@ -739,6 +1016,30 @@ components:
       required:
       - mode
       - url
+    Annonce:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        messageFr:
+          type: string
+        messageEn:
+          type: string
+        debutLe:
+          type: string
+          format: date-time
+        finLe:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - debutLe
+      - finLe
+      - id
+      - messageEn
+      - messageFr
     Appareil:
       type: object
       properties:
@@ -1087,6 +1388,13 @@ components:
       - expireLe
       - id
       - statut
+    Deverrouillage:
+      type: object
+      properties:
+        verificateurMotDePasse:
+          type: string
+      required:
+      - verificateurMotDePasse
     DureeConservation:
       enum:
       - INFINIE
@@ -1142,12 +1450,87 @@ components:
     Envoi:
       type: object
       properties:
-        changements:
-          type: array
-          items:
-            $ref: '#/components/schemas/Changement'
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        appareilSourceId:
+          type: string
+          format: uuid
+        appareilCibleId:
+          type: string
+          format: uuid
+          nullable: true
+        elementId:
+          type: string
+          format: uuid
+          nullable: true
+        contenuChiffre:
+          type: string
+          format: base64url
+          nullable: true
+        statut:
+          allOf:
+          - $ref: '#/components/schemas/EnvoiStatutEnum'
+          readOnly: true
+        envoyeLe:
+          type: string
+          format: date-time
+        expireLe:
+          type: string
+          format: date-time
       required:
-      - changements
+      - appareilCibleId
+      - appareilSourceId
+      - contenuChiffre
+      - elementId
+      - envoyeLe
+      - expireLe
+      - id
+      - statut
+    EnvoiCreation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        appareilCibleId:
+          type: string
+          format: uuid
+          nullable: true
+        elementId:
+          type: string
+          format: uuid
+          nullable: true
+        contenuChiffre:
+          type: string
+          format: base64url
+          nullable: true
+    EnvoiStatutEnum:
+      enum:
+      - EN_ATTENTE
+      - REMIS
+      - EXPIRE
+      type: string
+      description: |-
+        * `EN_ATTENTE` - En Attente
+        * `REMIS` - Remis
+        * `EXPIRE` - Expire
+    Export:
+      type: object
+      properties:
+        compte:
+          $ref: '#/components/schemas/Compte'
+        entites:
+          type: array
+          items: {}
+        fichiers:
+          type: array
+          items: {}
+      required:
+      - compte
+      - entites
+      - fichiers
     Fichier:
       type: object
       properties:
@@ -1278,6 +1661,115 @@ components:
           type: string
       required:
       - idTokenGoogle
+    Lien:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        elementId:
+          type: string
+          format: uuid
+        typeElement:
+          type: string
+        duree:
+          allOf:
+          - $ref: '#/components/schemas/DureeConservation'
+          readOnly: true
+        expireLe:
+          type: string
+          format: date-time
+          nullable: true
+        protegeParMotDePasse:
+          type: boolean
+        nbTelechargements:
+          type: integer
+        creeLe:
+          type: string
+          format: date-time
+        statut:
+          type: string
+          readOnly: true
+      required:
+      - creeLe
+      - duree
+      - elementId
+      - expireLe
+      - id
+      - nbTelechargements
+      - protegeParMotDePasse
+      - statut
+      - typeElement
+    LienCreation:
+      type: object
+      properties:
+        elementId:
+          type: string
+          format: uuid
+        duree:
+          $ref: '#/components/schemas/DureeConservation'
+        protegeParMotDePasse:
+          type: boolean
+          default: false
+        selDerivation:
+          type: string
+          format: base64url
+          nullable: true
+        cleElementEnveloppee:
+          type: string
+          format: base64url
+          nullable: true
+        verificateurMotDePasse:
+          type: string
+          format: base64url
+          nullable: true
+      required:
+      - duree
+      - elementId
+    LienCree:
+      type: object
+      properties:
+        lien:
+          $ref: '#/components/schemas/Lien'
+        jeton:
+          type: string
+      required:
+      - jeton
+      - lien
+    LienPublicConsultation:
+      type: object
+      properties:
+        type:
+          type: string
+        protegeParMotDePasse:
+          type: boolean
+      required:
+      - protegeParMotDePasse
+      - type
+    LotChangements:
+      type: object
+      properties:
+        changements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Changement'
+      required:
+      - changements
+    MotifEnum:
+      enum:
+      - CONTENU_ILLICITE
+      - ATTEINTE_DROIT_AUTEUR
+      - LOGICIEL_MALVEILLANT
+      - HAMECONNAGE
+      - AUTRE
+      type: string
+      description: |-
+        * `CONTENU_ILLICITE` - Contenu Illicite
+        * `ATTEINTE_DROIT_AUTEUR` - Atteinte Droit Auteur
+        * `LOGICIEL_MALVEILLANT` - Logiciel Malveillant
+        * `HAMECONNAGE` - Hameconnage
+        * `AUTRE` - Autre
     NotificationsActivesEnum:
       enum:
       - RAPPELS
@@ -1308,6 +1800,11 @@ components:
         nomAffichage:
           type: string
           maxLength: 100
+    PatchedProlongation:
+      type: object
+      properties:
+        duree:
+          $ref: '#/components/schemas/DureeConservation'
     PatchedRenommer:
       type: object
       properties:
@@ -1502,6 +1999,15 @@ components:
       required:
       - expireLe
       - jeton
+    SignalementCreation:
+      type: object
+      properties:
+        motif:
+          $ref: '#/components/schemas/MotifEnum'
+        commentaire:
+          type: string
+      required:
+      - motif
     StatutAppareil:
       enum:
       - EN_ATTENTE_DEVERROUILLAGE
@@ -1524,6 +2030,23 @@ components:
         * `ACTIF` - Actif
         * `SUSPENDU` - Suspendu
         * `SUPPRESSION_PROGRAMMEE` - Suppression Programmee
+    Support:
+      type: object
+      properties:
+        emailContact:
+          type: string
+          format: email
+          maxLength: 254
+        message:
+          type: string
+          maxLength: 5000
+          minLength: 5
+        infosTechniques:
+          type: string
+          maxLength: 5000
+      required:
+      - emailContact
+      - message
     Televersement:
       type: object
       properties:

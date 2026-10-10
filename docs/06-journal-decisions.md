@@ -32,3 +32,11 @@
 | D25 | 10/10 | Type d'un élément | Immuable : une transformation (H1) crée un nouvel élément. | Cohérent avec la règle « créer une copie par défaut ». |
 | D26 | 10/10 | Fichier supprimé | Effacé chez le fournisseur ; un message Telegram de plus de 48 h reste dans le canal, mais chiffré et sans clé. | Limite de Telegram ; effacement cryptographique. |
 | D27 | 10/10 | WebSocket | Route `/api/v1/ws` ; jeton dans le premier message ; fermeture `4401` (authentification) et `4403` (appareil révoqué). | Le jeton ne doit pas apparaître dans les URL. |
+| D28 | 10/10 | Envoi « à tous mes appareils » | Un seul envoi, avec la liste des appareils qui l'ont récupéré. | Pas de duplication du contenu chiffré. |
+| D29 | 10/10 | Notifications push | **FCM pour toutes les plateformes, web compris** (au lieu du Web Push standard prévu pour le web). | Tout aussi gratuit, un seul code d'envoi. |
+| D30 | 10/10 | Format de chiffrement | Spécification v1 : `docs/07-format-chiffrement.md` (XChaCha20-Poly1305 avec données associées, `crypto_box_seal`, secretstream pour les fichiers, Argon2id pour les liens). | Format commun à l'app, à la page publique et aux tests. |
+| D31 | 10/10 | Comptes jamais vérifiés | Supprimés après 7 jours. | Aucune donnée utile ; libère l'adresse. |
+| D32 | 10/10 | Compteur de téléchargements d'un lien | Incrémenté uniquement au début d'un téléchargement (pas à chaque reprise `Range`). | Compter les vrais téléchargements. |
+| D33 | 10/10 | Texte des notifications push | Générique, sans aucun contenu (« Vous avez un rappel »). | Chiffrement de bout en bout. |
+| D34 | 10/10 | Suspension (administration) | Ferme les sessions, désactive le lien, informe le propriétaire par e-mail ; contestation par réponse à cet e-mail. | I24 sans développer d'interface dédiée. |
+| D35 | 10/10 | Purge du presse-papier | Une entrée épinglée **ou** placée en accès rapide n'est jamais purgée. | H8. |

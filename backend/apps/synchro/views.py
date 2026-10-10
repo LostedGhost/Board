@@ -32,20 +32,20 @@ class ChangementsView(APIView):
         return Response({"versionCourante": version, "changements": changements, "encore": encore})
 
 
-class EnvoiSerializer(serializers.Serializer):
+class LotChangementsSerializer(serializers.Serializer):
     changements = services.ChangementSerializer(many=True, max_length=services.LIMITE_LOT)
 
 
 class EnvoyerView(APIView):
     @extend_schema(
-        request=EnvoiSerializer,
+        request=LotChangementsSerializer,
         responses=inline_serializer(
             "ResultatEnvoi",
             {"versionCourante": serializers.IntegerField(), "resultats": serializers.ListField(child=serializers.DictField())},
         ),
     )
     def post(self, request):
-        s = EnvoiSerializer(data=request.data)
+        s = LotChangementsSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         version, resultats = services.appliquer_changements(request.user, request.appareil, s.validated_data["changements"])
         return Response({"versionCourante": version, "resultats": resultats})

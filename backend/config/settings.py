@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     "apps.elements",
     "apps.synchro",
     "apps.fichiers",
+    "apps.envois",
+    "apps.liens",
+    "apps.moderation",
 ]
 
 AUTH_USER_MODEL = "comptes.Compte"
@@ -127,6 +130,13 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TIMEZONE = "UTC"
+CELERY_BEAT_SCHEDULE = {
+    "rappels": {"task": "apps.elements.taches.envoyer_rappels_dus", "schedule": 60.0},
+    "retention": {"task": "apps.elements.taches.purger_retention", "schedule": 300.0},
+    "suppressions": {"task": "apps.comptes.taches.supprimer_comptes_echus", "schedule": 3600.0},
+    "inactivite": {"task": "apps.comptes.taches.gerer_inactivite", "schedule": 86400.0},
+    "menage": {"task": "apps.comptes.taches.menage", "schedule": 3600.0},
+}
 
 # E-mails : console en local ; fournisseur gratuit à choisir à l'étape 8.
 EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
@@ -138,6 +148,12 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 
 # Connexion Google (A1b) : identifiants OAuth des apps web, Android et iOS, séparés par des virgules.
+# Notifications push (FCM, HTTP v1) : identifiant du projet Firebase + fichier JSON du compte de service.
+FCM_PROJECT_ID = env("FCM_PROJECT_ID", "")
+FCM_FICHIER_COMPTE_SERVICE = env("FCM_FICHIER_COMPTE_SERVICE", "")
+# Adresse qui reçoit les demandes de support (I22).
+SUPPORT_EMAIL = env("SUPPORT_EMAIL", "")
+
 GOOGLE_CLIENT_IDS = [c.strip() for c in env("GOOGLE_CLIENT_IDS", "").split(",") if c.strip()]
 
 PASSWORD_HASHERS = [

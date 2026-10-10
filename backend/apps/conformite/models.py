@@ -36,3 +36,33 @@ class AcceptationConditions(models.Model):
     class Meta:
         db_table = "acceptation_conditions"
         constraints = [models.UniqueConstraint(fields=["compte", "version"], name="acceptation_unique")]
+
+
+class Annonce(models.Model):
+    """I30 : message court affiché dans toutes les apps."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    message_fr = models.CharField(max_length=500)
+    message_en = models.CharField(max_length=500)
+    debut_le = models.DateTimeField(default=timezone.now)
+    fin_le = models.DateTimeField(null=True, blank=True)
+    publiee_par = models.ForeignKey(Compte, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        db_table = "annonce"
+
+    def __str__(self):
+        return self.message_fr[:60]
+
+
+class DemandeSupport(models.Model):
+    """I22 : enregistrée en base ET envoyée par e-mail (décision validée)."""
+
+    compte = models.ForeignKey(Compte, on_delete=models.SET_NULL, null=True, blank=True, related_name="demandes_support")
+    email_contact = models.EmailField()
+    message = models.TextField(max_length=5000)
+    infos_techniques = models.TextField(max_length=5000, null=True, blank=True)
+    cree_le = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "demande_support"

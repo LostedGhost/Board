@@ -73,6 +73,11 @@ uv run python manage.py spectacular --file ../docs/openapi.yaml
 | 2.5 | `GET /synchro/changements`, `POST /synchro/envoyer` | ✅ livré, testé |
 | 2.6 | WebSocket `/api/v1/ws` | ✅ livré, testé |
 | 2.7 | `POST /fichiers`, `GET /fichiers/{id}`, `GET /fichiers/{id}/acces`, `GET /fichiers/{id}/contenu`, `POST /fichiers/{id}/reessayer` | ✅ livré, testé |
+| 2.8 | `POST /envois`, `GET /envois/recus`, `POST /envois/{id}/recupere` | ✅ livré, testé |
+| 2.9 | `GET`/`POST /liens`, `PATCH`/`DELETE /liens/{id}` | ✅ livré, testé |
+| 2.10 | `GET /public/liens/{jeton}`, `POST …/deverrouiller`, `GET …/fichier`, `POST …/signalements` | ✅ livré, testé |
+| 2.11 | `GET /annonces/actives`, `POST /support`, `GET /export` | ✅ livré, testé |
+| 2.12 | Administration Django `/admin/` (signalements, suspensions, annonces, conditions, support) | ✅ livré |
 
 ### `GET /api/v1/health` (public)
 
@@ -174,3 +179,22 @@ Revue de sécurité : contrôle d'accès par compte sur chaque identifiant (404 
 - Supprimer l'élément (synchro) efface les morceaux chez le fournisseur.
 
 Lancer un worker en production : `uv run celery -A config worker -l info` (et `beat` pour les tâches planifiées).
+
+## Lots 2.8 à 2.12
+
+- **Envois** : vers un appareil précis ou vers tous les autres ; conservés 7 jours ; push + événement `envoi_recu`.
+- **Liens publics** : contenu **en direct** (version actuelle de l'élément, avec toutes les tâches d'une liste) ; protection par mot de passe vérifiée **côté serveur** (5 essais par IP et par lien, puis 15 min de blocage) ; jeton court signé (10 min) pour télécharger le fichier d'un lien protégé ; réponse identique (`410`) pour un lien inexistant, expiré, révoqué ou désactivé.
+- **Modération** (`/admin/`) : classer sans suite, désactiver le lien, suspendre le compte (sessions fermées, e-mail au propriétaire), lever une suspension.
+- **Push** (`commun/push.py`) : FCM HTTP v1 ; ignoré proprement tant que `FCM_PROJECT_ID` et `FCM_FICHIER_COMPTE_SERVICE` ne sont pas renseignés.
+
+## Tâches planifiées (Celery Beat)
+
+| Tâche | Fréquence |
+|---|---|
+| Envoi des rappels dus, calcul de la prochaine occurrence | 1 min |
+| Purge de rétention (presse-papier, versions de post-it) | 5 min |
+| Suppression des comptes dont le délai de grâce est échu | 1 h |
+| Ménage (sessions expirées, demandes et envois expirés) | 1 h |
+| Inactivité (avertissement à 12 mois, suppression 30 jours plus tard) ; comptes jamais vérifiés depuis 7 jours | 24 h |
+
+`uv run celery -A config worker -l info` et `uv run celery -A config beat -l info`.
