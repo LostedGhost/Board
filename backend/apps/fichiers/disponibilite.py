@@ -53,5 +53,5 @@ def stockage_disponible():
     try:
         cache.set(CLE_CACHE, disponible, DUREE_CACHE_S)
     except Exception:
-        pass
+        journal.debug("Cache indisponible : résultat du stockage non mémorisé")
     return disponible

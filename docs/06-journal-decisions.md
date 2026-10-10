@@ -40,3 +40,5 @@
 | D33 | 10/10 | Texte des notifications push | Générique, sans aucun contenu (« Vous avez un rappel »). | Chiffrement de bout en bout. |
 | D34 | 10/10 | Suspension (administration) | Ferme les sessions, désactive le lien, informe le propriétaire par e-mail ; contestation par réponse à cet e-mail. | I24 sans développer d'interface dédiée. |
 | D35 | 10/10 | Purge du presse-papier | Une entrée épinglée **ou** placée en accès rapide n'est jamais purgée. | H8. |
+| D36 | 10/10 | Équivalent Postman de l'étape 5 | Scénario Python de bout en bout avec la vraie cryptographie (`backend/e2e/`). | Valide l'API **et** le format de chiffrement ; réutilisable. |
+| D37 | 10/10 | Production | HTTPS forcé, HSTS d'un an, cookies sécurisés dès que `DJANGO_DEBUG=false`. | Durcissement standard (`check --deploy`). |

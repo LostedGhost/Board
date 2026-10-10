@@ -146,6 +146,7 @@ EMAIL_PORT = int(env("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_FILE_PATH = env("EMAIL_FILE_PATH", "")  # backend « filebased » (scénario de bout en bout)
 
 # Connexion Google (A1b) : identifiants OAuth des apps web, Android et iOS, séparés par des virgules.
 # Notifications push (FCM, HTTP v1) : identifiant du projet Firebase + fichier JSON du compte de service.
@@ -205,3 +206,15 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
 }
+
+# --- Production (DEBUG désactivé) : HTTPS obligatoire derrière le proxy du PaaS ---
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
+    SECURE_REDIRECT_EXEMPT = [r"^api/v1/health$"]  # sonde de l'hébergeur en HTTP interne
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in env("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
