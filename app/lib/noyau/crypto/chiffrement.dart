@@ -137,7 +137,7 @@ class Chiffrement {
   /// Renvoie (clé du lien, vérificateur envoyé au serveur). Coûteux : Argon2id, 64 Mo.
   ({Uint8List cleLien, Uint8List verificateur}) deriverLien(String motDePasse, Uint8List sel) {
     final pw = sodium.crypto.pwhash;
-    final s = pw(
+    final s = pw.callRaw(
       outLen: 64,
       password: Int8List.fromList(utf8.encode(motDePasse)),
       salt: sel,

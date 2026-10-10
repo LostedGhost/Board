@@ -54,3 +54,6 @@
 | D47 | 10/10 | Rappels sans push configuré | Planificateur local dans l'app (notification système sur desktop) ; avec FCM configuré, le serveur envoie aussi un push. | Rappels fonctionnels dès le MVP, sans compte Firebase. |
 | D48 | 10/10 | Capture des images du presse-papier (B1) | Reportée : le MVP capture le texte et les liens ; les images peuvent être ajoutées comme fichiers. | L'API de presse-papier de Flutter ne lit que le texte ; les plugins d'images exigent une chaîne Rust. |
 | D49 | 10/10 | Liens publics déjà créés | L'URL complète (avec la clé après `#`) est mémorisée sur l'appareil qui l'a créée, pour pouvoir la recopier. | Le serveur ne connaît ni le jeton en clair ni la clé. |
+| D50 | 10/10 | CORS pour Flutter Web | Activation de `django-cors-headers` avec `CORS_ALLOWED_ORIGINS` configurable (`http://localhost:5000` par défaut). | Permettre à l'application cliente compilée pour le Web d'interroger l'API Django sans blocage navigateur. |
+| D51 | 10/10 | Pas de conteneurisation Docker | Déploiement direct sans Docker (PaaS natif Python/Node, services managés PostgreSQL et Redis, ou serveur bare-metal). | Décision et contrainte ferme exprimée par l'utilisateur. |
+

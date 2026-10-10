@@ -73,6 +73,7 @@ class _EcranEnvoisState extends State<EcranEnvois> {
         await noyau.depot.ajouterPressePapier(Depot.texteDe({'type': type, 'donnees': donnees}));
       }
     }
+    if (!mounted) return;
     await executer(context, () => noyau.api.post('/envois/${env['id']}/recupere'));
     _charger();
   }

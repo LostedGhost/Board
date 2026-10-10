@@ -54,13 +54,13 @@ class BaseLocale {
   }
 
   Future<List<Map<String, Object?>>> tous(Entite e, {Filter? filtre, bool avecSupprimes = false}) async {
-    final f = avecSupprimes ? filtre : Filter.and([if (filtre != null) filtre, Filter.isNull('supprimeLe')]);
+    final f = avecSupprimes ? filtre : Filter.and([?filtre, Filter.isNull('supprimeLe')]);
     final r = await store(e).find(db, finder: Finder(filter: f));
     return r.map((s) => Map<String, Object?>.from(s.value)).toList();
   }
 
   Stream<List<Map<String, Object?>>> observer(Entite e, {Filter? filtre}) {
-    final f = Filter.and([if (filtre != null) filtre, Filter.isNull('supprimeLe')]);
+    final f = Filter.and([?filtre, Filter.isNull('supprimeLe')]);
     return store(e).query(finder: Finder(filter: f)).onSnapshots(db).map(
           (liste) => liste.map((s) => Map<String, Object?>.from(s.value)).toList(),
         );
@@ -111,7 +111,7 @@ class BaseLocale {
     final r = store(e).record(id);
     final v = await r.get(db);
     if (v == null) return;
-    await r.put(db, {...v, 'sale': false, if (version != null) 'version': version});
+    await r.put(db, {...v, 'sale': false, 'version': ?version});
   }
 
   /// Rend toutes les données « à envoyer » : passage du mode visiteur à un compte (I3).

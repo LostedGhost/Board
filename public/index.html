@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LuluBoard — Chiffrez ce que vous copiez</title>
+  <style>
+    :root {
+      --bg: #1A1B1E;
+      --surface: #25262A;
+      --primary: #7C5CFF;
+      --text: #E8E8EC;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      padding: 2rem;
+      text-align: center;
+      background: var(--surface);
+      border-bottom: 1px solid #3A3C42;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      color: var(--primary);
+    }
+
+    .hero {
+      max-width: 800px;
+      margin: 4rem auto;
+      padding: 0 1.5rem;
+      text-align: center;
+    }
+
+    .hero h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: #9A9AA5;
+      margin-bottom: 2rem;
+    }
+
+    .cta {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.75rem 2rem;
+      border-radius: 999px;
+      font-size: 1rem;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid #3A3C42;
+    }
+
+    .features {
+      max-width: 1000px;
+      margin: 4rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .feature {
+      background: var(--surface);
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #3A3C42;
+    }
+
+    .feature h3 {
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: #9A9AA5;
+      border-top: 1px solid #3A3C42;
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>LuluBoard</h1>
+    <p>Votre presse-papier, notes, snippets et tâches, chiffrés de bout en bout.</p>
+  </header>
+
+  <section class="hero">
+    <h2>Chiffrez ce que vous copiez.</h2>
+    <p>LuluBoard stocke vos contenus localement et les synchronise entre vos appareils. Le serveur ne les lit jamais.
+    </p>
+    <div class="cta">
+      <a href="https://lulu.board" class="btn btn-primary">Créer un compte</a>
+      <a href="#" class="btn btn-ghost">Télécharger l'application</a>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="feature">
+      <h3>🔐 Chiffrement E2EE</h3>
+      <p>Libsodium de bout en bout. Seul vous et vos appareils déverrouillés pouvez lire vos données.</p>
+    </div>
+    <div class="feature">
+      <h3>📱 Multi-appareils</h3>
+      <p>Synchronisation entre desktop, mobile et web. Jusqu'à 3 appareils par compte.</p>
+    </div>
+    <div class="feature">
+      <h3>🔌 Hors ligne</h3>
+      <p>Base locale offline-first. Tout fonctionne sans réseau et se synchronise automatiquement.</p>
+    </div>
+    <div class="feature">
+      <h3>🔗 Partage public</h3>
+      <p>Liens expirables et protégés par mot de passe, pour les fichiers et les post-it.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>LuluBoard · Conformité APDP / RGPD · <a href="#" style="color:var(--primary)">Confidentialité</a> · <a href="#"
+        style="color:var(--primary)">Conditions</a></p>
+  </footer>
+</body>
+
+</html>

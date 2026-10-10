@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "rest_framework",
     "drf_spectacular",
     "channels",
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "comptes.Compte"
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "commun.middleware.RequestIdMiddleware",
     "commun.version_app.VersionAppMiddleware",
     "commun.taille.TailleRequeteMiddleware",
@@ -97,6 +99,13 @@ DATABASES = {
 }
 
 REDIS_URL = env("REDIS_URL", "redis://localhost:6379/0")
+
+# Origines autorisées à appeler l'API depuis un navigateur (app web Flutter, D50).
+# Les apps natives et la page publique /l/ (même origine) ne sont pas concernées.
+CORS_ALLOWED_ORIGINS = [o.strip() for o in env("CORS_ALLOWED_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",") if o.strip()]
+CORS_URLS_REGEX = r"^/api/.*$"
+CORS_ALLOW_HEADERS = ["accept", "authorization", "content-type", "x-app-version", "x-request-id", "range"]
+CORS_EXPOSE_HEADERS = ["x-request-id", "content-range", "content-length", "accept-ranges"]
 
 CHANNEL_LAYERS = {
     "default": {

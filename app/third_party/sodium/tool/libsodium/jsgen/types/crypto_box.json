@@ -1,7 +1,0 @@
-{
-  "name": "CryptoBox",
-  "members": {
-    "ciphertext": "JSUint8Array",
-    "mac": "JSUint8Array"
-  }
-}

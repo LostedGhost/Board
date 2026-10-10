@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -252,28 +251,39 @@ class _AppareilsState extends State<_Appareils> {
           Card(
             color: Theme.of(context).colorScheme.tertiaryContainer,
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: ListTile(
-              leading: const Icon(Icons.phonelink_lock),
-              title: Text('« ${(d['appareilDemandeur'] as Map)['nom']} » demande l\'accès'),
-              subtitle: const Text('Saisissez le code affiché sur ce nouvel appareil. Si ce n\'est pas vous, refusez.'),
-              trailing: Wrap(
-                spacing: 8,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextButton(
-                    onPressed: () async {
-                      await executer(context, () => noyau.compte.refuser(d['id'] as String), succes: 'Refusé : l\'appareil a été révoqué.');
-                      _charger();
-                    },
-                    child: const Text('Refuser'),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
-                      final code = await demanderTexte(context, 'Code affiché sur le nouvel appareil', libelle: 'Code à 6 chiffres');
-                      if (code == null || !context.mounted) return;
-                      await executer(context, () => noyau.compte.approuver(d, code), succes: 'Appareil déverrouillé.');
-                      _charger();
-                    },
-                    child: const Text('Approuver'),
+                  Row(children: [
+                    const Icon(Icons.phonelink_lock),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text("« ${(d['appareilDemandeur'] as Map)['nom']} » demande l'accès", style: Theme.of(context).textTheme.titleSmall)),
+                  ]),
+                  const SizedBox(height: 6),
+                  const Text("Saisissez le code affiché sur ce nouvel appareil. Si ce n'est pas vous, refusez."),
+                  OverflowBar(
+                    alignment: MainAxisAlignment.end,
+                    spacing: 8,
+                    children: [
+                      TextButton(
+                        onPressed: () async {
+                          await executer(context, () => noyau.compte.refuser(d['id'] as String), succes: "Refusé : l'appareil a été révoqué.");
+                          _charger();
+                        },
+                        child: const Text('Refuser'),
+                      ),
+                      FilledButton(
+                        onPressed: () async {
+                          final code = await demanderTexte(context, 'Code affiché sur le nouvel appareil', libelle: 'Code à 6 chiffres');
+                          if (code == null || !context.mounted) return;
+                          await executer(context, () => noyau.compte.approuver(d, code), succes: 'Appareil déverrouillé.');
+                          _charger();
+                        },
+                        child: const Text('Approuver'),
+                      ),
+                    ],
                   ),
                 ],
               ),

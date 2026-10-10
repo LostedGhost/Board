@@ -1,23 +1,32 @@
-# Secrets
-.env
-*.env.local
-
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Outils
+# Flutter / Dart
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages-dependencies
+.dart_tool/
+*.iml
+*.swp
+.DS_Store
 .idea/
 .vscode/
+
+# Backend
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+.env
+backend/scripts/
 *.log
+hs_err_pid*.log
+replay_pid*.log
 
-# Flutter (prototype et app)
-.dart_tool/
-build/
+# OpenAPI (généré)
+docs/openapi.yaml
 
-# Script de création de la base locale (contient le mot de passe de dev)
-backend/scripts/creer_base_dev.sql
+# Base de données locales
+*.db
+*.sqlite
+*.sqlite3

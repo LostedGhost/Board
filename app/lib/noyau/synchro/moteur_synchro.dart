@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -158,7 +157,7 @@ class MoteurSynchro extends ChangeNotifier {
           'epingle': r['epingle'] ?? false,
           'typeContenu': r['typeContenu'],
           'archive': r['archive'] ?? false,
-          if (cleEnveloppee != null) 'cleElementEnveloppee': cleEnveloppee,
+          'cleElementEnveloppee': ?cleEnveloppee,
           'contenuChiffre': encoderB64(crypto.aeadJson(cle, donnees, 'el:$id')),
         };
       case Entite.tableau:

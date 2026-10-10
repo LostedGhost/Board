@@ -19,6 +19,7 @@ dependencies = [
     "requests>=2.32",
     "pynacl>=1.5",
     "uvicorn[standard]>=0.34",
+    "django-cors-headers>=4.6",
 ]
 
 [dependency-groups]

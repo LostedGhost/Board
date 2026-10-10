@@ -112,7 +112,7 @@ class _EcranPressePapierState extends State<EcranPressePapier> {
               return ListView.separated(
                 padding: const EdgeInsets.all(12),
                 itemCount: entrees.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (context, i) => _CarteEntree(entrees[i]),
               );
             },

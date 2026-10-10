@@ -137,7 +137,7 @@ Future<String> _tableauParDefaut(BuildContext context) async {
   return depot.creerTableau('Mon tableau', 0);
 }
 
-/// D1 / H3 : envoi chiffré (clé maître, données associées « envoi:<id> »).
+/// D1 / H3 : envoi chiffré (clé maître, données associées `envoi:<id>`).
 Future<void> envoyerAUnAppareil(BuildContext context, Enr element) async {
   final noyau = context.noyau;
   final appareils = await executer(context, () async => (await noyau.api.get('/appareils') as List).cast<Map<String, dynamic>>());

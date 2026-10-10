@@ -64,7 +64,8 @@ class PorteurNoyau extends InheritedWidget {
 
   final Noyau noyau;
 
-  static Noyau of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<PorteurNoyau>()!.noyau;
+  /// Le noyau ne change jamais après le démarrage : lecture sans abonnement, utilisable dans initState().
+  static Noyau of(BuildContext context) => context.getInheritedWidgetOfExactType<PorteurNoyau>()!.noyau;
 
   @override
   bool updateShouldNotify(PorteurNoyau oldWidget) => oldWidget.noyau != noyau;
