@@ -39,10 +39,16 @@ INSTALLED_APPS = [
     "channels",
     "commun",
     "apps.sante",
+    "apps.comptes",
+    "apps.appareils",
+    "apps.conformite",
 ]
+
+AUTH_USER_MODEL = "comptes.Compte"
 
 MIDDLEWARE = [
     "commun.middleware.RequestIdMiddleware",
+    "commun.version_app.VersionAppMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -106,6 +112,18 @@ LULUFILES_API_KEY = env("LULUFILES_API_KEY", "")
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHANNEL_ID = env("TELEGRAM_CHANNEL_ID", "")
 
+# E-mails : console en local ; fournisseur gratuit à choisir à l'étape 8.
+EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "LuluBoard <no-reply@luluboard.local>")
+EMAIL_HOST = env("EMAIL_HOST", "")
+EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+
+# Connexion Google (A1b) : identifiants OAuth des apps web, Android et iOS, séparés par des virgules.
+GOOGLE_CLIENT_IDS = [c.strip() for c in env("GOOGLE_CLIENT_IDS", "").split(",") if c.strip()]
+
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.Argon2PasswordHasher",
 ]
@@ -113,8 +131,9 @@ PASSWORD_HASHERS = [
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["apps.appareils.authentification.AuthentificationSession"],
+    # Par défaut, tout est 🔐 (le plus strict) ; les routes publiques ou 🔑 le déclarent explicitement.
+    "DEFAULT_PERMISSION_CLASSES": ["apps.appareils.permissions.AppareilDeverrouille"],
     "EXCEPTION_HANDLER": "commun.erreurs.gestionnaire_exceptions",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "UNAUTHENTICATED_USER": None,
@@ -124,6 +143,10 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "LuluBoard API",
     "VERSION": VERSION_API,
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "TypeAppareil": "apps.appareils.models.TypeAppareil",
+        "TypeCode": "apps.comptes.models.TypeCode",
+    },
 }
 
 LANGUAGE_CODE = "fr"

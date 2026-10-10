@@ -9,7 +9,6 @@ import logging
 from django.http import Http404
 from rest_framework import exceptions, status
 from rest_framework.response import Response
-from rest_framework.views import exception_handler
 
 from commun.middleware import request_id_courant
 
@@ -59,6 +58,8 @@ def gestionnaire_exceptions(exc, context):
 
     if isinstance(exc, Http404):
         exc = exceptions.NotFound()
+
+    from rest_framework.views import exception_handler  # import tardif : évite un import circulaire avec DRF
 
     response = exception_handler(exc, context)
     if response is None:

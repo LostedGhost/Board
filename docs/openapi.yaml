@@ -3,11 +3,97 @@ info:
   title: LuluBoard API
   version: 0.1.0
 paths:
+  /api/v1/auth/google:
+    post:
+      operationId: auth_google_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Google'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleReponse'
+          description: ''
+  /api/v1/auth/inscription:
+    post:
+      operationId: auth_inscription_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inscription'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InscriptionReponse'
+          description: ''
+  /api/v1/auth/inscription/verifier:
+    post:
+      operationId: auth_inscription_verifier_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Verification'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReponseSession'
+          description: ''
+  /api/v1/auth/renvoyer-code:
+    post:
+      operationId: auth_renvoyer_code_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenvoyerCode'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/compte/cle-recuperation/confirmer:
+    post:
+      operationId: compte_cle_recuperation_confirmer_create
+      tags:
+      - compte
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/health:
     get:
-      operationId: api_v1_health_retrieve
+      operationId: health_retrieve
       tags:
-      - api
+      - health
       security:
       - {}
       responses:
@@ -19,11 +105,281 @@ paths:
           description: ''
 components:
   schemas:
+    Appareil:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          readOnly: true
+        type:
+          allOf:
+          - $ref: '#/components/schemas/TypeAppareil'
+          readOnly: true
+        plateforme:
+          type: string
+          readOnly: true
+        versionApp:
+          type: string
+        statut:
+          allOf:
+          - $ref: '#/components/schemas/AppareilStatutEnum'
+          readOnly: true
+        ajouteLe:
+          type: string
+          format: date-time
+        derniereActiviteLe:
+          type: string
+          format: date-time
+        courant:
+          type: boolean
+          readOnly: true
+      required:
+      - ajouteLe
+      - courant
+      - derniereActiviteLe
+      - id
+      - nom
+      - plateforme
+      - statut
+      - type
+      - versionApp
+    AppareilExistant:
+      type: object
+      properties:
+        appareilId:
+          type: string
+          format: uuid
+      required:
+      - appareilId
+    AppareilNouveau:
+      type: object
+      properties:
+        nom:
+          type: string
+          maxLength: 100
+          minLength: 1
+        type:
+          $ref: '#/components/schemas/TypeAppareil'
+        plateforme:
+          type: string
+          maxLength: 50
+          minLength: 1
+        versionApp:
+          type: string
+          maxLength: 20
+          pattern: ^\d+\.\d+\.\d+([+-][0-9A-Za-z.-]+)?$
+        clePublique:
+          type: string
+          format: base64url
+      required:
+      - clePublique
+      - nom
+      - plateforme
+      - type
+      - versionApp
+    AppareilNouveauOuExistant:
+      oneOf:
+      - $ref: '#/components/schemas/AppareilNouveau'
+      - $ref: '#/components/schemas/AppareilExistant'
+    AppareilStatutEnum:
+      enum:
+      - EN_ATTENTE_DEVERROUILLAGE
+      - ACTIF
+      - REVOQUE
+      type: string
+      description: |-
+        * `EN_ATTENTE_DEVERROUILLAGE` - En Attente Deverrouillage
+        * `ACTIF` - Actif
+        * `REVOQUE` - Revoque
+    ClesInitiales:
+      type: object
+      properties:
+        enveloppeRecuperation:
+          type: string
+          format: base64url
+        enveloppeAppareil:
+          type: string
+          format: base64url
+        clePubliqueVerification:
+          type: string
+          format: base64url
+      required:
+      - clePubliqueVerification
+      - enveloppeAppareil
+      - enveloppeRecuperation
+    Compte:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        nomAffichage:
+          type: string
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
+        statut:
+          allOf:
+          - $ref: '#/components/schemas/CompteStatutEnum'
+          readOnly: true
+        aMotDePasse:
+          type: boolean
+          readOnly: true
+        googleLie:
+          type: boolean
+        cleRecuperationConfirmee:
+          type: boolean
+          readOnly: true
+        suppressionPrevueLe:
+          type: string
+          format: date-time
+        creeLe:
+          type: string
+          format: date-time
+      required:
+      - aMotDePasse
+      - cleRecuperationConfirmee
+      - creeLe
+      - email
+      - googleLie
+      - id
+      - nomAffichage
+      - role
+      - statut
+      - suppressionPrevueLe
+    CompteStatutEnum:
+      enum:
+      - EN_ATTENTE_VERIFICATION
+      - ACTIF
+      - SUSPENDU
+      - SUPPRESSION_PROGRAMMEE
+      type: string
+      description: |-
+        * `EN_ATTENTE_VERIFICATION` - En Attente Verification
+        * `ACTIF` - Actif
+        * `SUSPENDU` - Suspendu
+        * `SUPPRESSION_PROGRAMMEE` - Suppression Programmee
+    Google:
+      type: object
+      properties:
+        idTokenGoogle:
+          type: string
+          maxLength: 4096
+        appareil:
+          $ref: '#/components/schemas/AppareilNouveauOuExistant'
+        conditionsAcceptees:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 10
+        cles:
+          $ref: '#/components/schemas/ClesInitiales'
+      required:
+      - appareil
+      - idTokenGoogle
+    GoogleReponse:
+      type: object
+      properties:
+        session:
+          $ref: '#/components/schemas/Session'
+        compte:
+          $ref: '#/components/schemas/Compte'
+        appareil:
+          $ref: '#/components/schemas/Appareil'
+        nouveauCompte:
+          type: boolean
+      required:
+      - appareil
+      - compte
+      - nouveauCompte
+      - session
+    Inscription:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        nomAffichage:
+          type: string
+          maxLength: 100
+          minLength: 1
+        motDePasse:
+          type: string
+          maxLength: 128
+        conditionsAcceptees:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 10
+      required:
+      - email
+      - motDePasse
+      - nomAffichage
+    InscriptionReponse:
+      type: object
+      properties:
+        compteId:
+          type: string
+          format: uuid
+      required:
+      - compteId
+    RenvoyerCode:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        type:
+          $ref: '#/components/schemas/RenvoyerCodeTypeEnum'
+      required:
+      - email
+      - type
+    RenvoyerCodeTypeEnum:
+      enum:
+      - INSCRIPTION
+      type: string
+      description: '* `INSCRIPTION` - INSCRIPTION'
+    ReponseSession:
+      type: object
+      description: Réponse commune à l'inscription vérifiée, à Google et à la connexion.
+      properties:
+        session:
+          $ref: '#/components/schemas/Session'
+        compte:
+          $ref: '#/components/schemas/Compte'
+        appareil:
+          $ref: '#/components/schemas/Appareil'
+      required:
+      - appareil
+      - compte
+      - session
+    RoleEnum:
+      enum:
+      - UTILISATEUR
+      - ADMINISTRATEUR
+      type: string
+      description: |-
+        * `UTILISATEUR` - Utilisateur
+        * `ADMINISTRATEUR` - Administrateur
     Sante:
       type: object
       properties:
         statut:
-          $ref: '#/components/schemas/StatutEnum'
+          $ref: '#/components/schemas/SanteStatutEnum'
         version:
           type: string
         verifications:
@@ -32,7 +388,7 @@ components:
       - statut
       - verifications
       - version
-    StatutEnum:
+    SanteStatutEnum:
       enum:
       - ok
       - degrade
@@ -40,6 +396,46 @@ components:
       description: |-
         * `ok` - ok
         * `degrade` - degrade
+    Session:
+      type: object
+      properties:
+        jeton:
+          type: string
+        expireLe:
+          type: string
+          format: date-time
+      required:
+      - expireLe
+      - jeton
+    TypeAppareil:
+      enum:
+      - WEB
+      - MOBILE
+      - DESKTOP
+      type: string
+      description: |-
+        * `WEB` - Web
+        * `MOBILE` - Mobile
+        * `DESKTOP` - Desktop
+    Verification:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        code:
+          type: string
+          pattern: ^\d{6}$
+        appareil:
+          $ref: '#/components/schemas/AppareilNouveau'
+        cles:
+          $ref: '#/components/schemas/ClesInitiales'
+      required:
+      - appareil
+      - cles
+      - code
+      - email
     Verifications:
       type: object
       properties:
@@ -53,3 +449,8 @@ components:
       - base
       - redis
       - stockage
+  securitySchemes:
+    session:
+      type: http
+      scheme: bearer
+      description: Jeton de session opaque

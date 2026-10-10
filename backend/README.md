@@ -59,6 +59,11 @@ uv run python manage.py spectacular --file ../docs/openapi.yaml
 | Lot (contrat) | Route | Statut |
 |---|---|---|
 | 2.0 | `GET /api/v1/health` | ✅ livré, testé |
+| 2.1 | `POST /api/v1/auth/inscription` | ✅ livré, testé |
+| 2.1 | `POST /api/v1/auth/renvoyer-code` | ✅ livré, testé |
+| 2.1 | `POST /api/v1/auth/inscription/verifier` | ✅ livré, testé |
+| 2.1 | `POST /api/v1/auth/google` | ✅ livré, testé |
+| 2.1 | `POST /api/v1/compte/cle-recuperation/confirmer` | ✅ livré, testé |
 
 ### `GET /api/v1/health` (public)
 
@@ -78,3 +83,29 @@ Indique si l'API et ses dépendances fonctionnent.
 - **Format d'erreur unique** `{ "erreur": { "code", "message", "champs"?, "requestId" } }` (`commun/erreurs.py`).
 - **`X-Request-ID`** sur chaque réponse, repris dans les journaux (`commun/middleware.py`). Une valeur fournie par le client n'est reprise que si son format est sûr.
 - Mots de passe hachés en **Argon2**.
+
+## Lot 2.1 — Inscription et vérification
+
+Les corps de requête et de réponse sont ceux du contrat (`docs/05-contrat-api.md`, section 2.1).
+
+### Précisions apportées au contrat
+- **Réinscription** : un e-mail inscrit mais jamais vérifié peut être réinscrit (le nom et le mot de passe sont remplacés, un nouveau code est envoyé).
+- **Google ne fusionne jamais automatiquement** avec un compte e-mail existant : `409 email_deja_utilise`, puis liaison depuis les réglages (I16).
+- **Clé de récupération (option a)** : obligatoire pour un compte e-mail (`403 cle_recuperation_non_confirmee` sur les routes 🔐), reportable pour un compte lié à Google.
+- `X-App-Version` absent : la requête est acceptée (pages publiques, outils de test).
+
+### Sessions et accès
+- `Authorization: Bearer <jeton>` : jeton opaque de 256 bits, stocké **haché** (SHA-256), avec une expiration glissante de 30 jours.
+- Par défaut, toute route est 🔐 (`AppareilDeverrouille`) ; les routes publiques le déclarent explicitement.
+
+### Revue de sécurité (checklist lucio-dev)
+| Catégorie | Mesure |
+|---|---|
+| Contrôle d'accès | permission 🔐 par défaut ; appareil révoqué → 403 ; compte suspendu → 403 ; la session est liée à un appareil |
+| Injection | ORM uniquement, aucune requête SQL construite à la main |
+| Côté serveur | aucune URL fournie par le client n'est appelée ; le jeton Google est vérifié par la bibliothèque officielle (signature, audience, émetteur, e-mail vérifié) |
+| Côté client | API JSON uniquement ; `Cache-Control: no-store` sur les réponses qui contiennent un jeton |
+| Logique métier | code valable 15 min et 5 essais, comptés même en cas d'échec (transaction séparée) ; consommation du code et activation protégées par `select_for_update` ; plafond de 3 appareils |
+| Authentification | Argon2 pour les mots de passe ; codes stockés en HMAC-SHA256 ; limitation de débit sur l'inscription, la vérification, le renvoi de code et Google ; réponses identiques pour un e-mail inconnu |
+| Configuration | secrets dans `.env` (non versionné) ; erreurs au format commun, sans trace interne |
+| API | sérialiseurs explicites (pas d'affectation massive : `role`/`statut` ignorés, testé) ; tailles des clés contrôlées après décodage |
