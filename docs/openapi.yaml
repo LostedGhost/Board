@@ -105,6 +105,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Enveloppe'
           description: ''
+  /api/v1/appareils/courant/preferences:
+    get:
+      operationId: appareils_courant_preferences_retrieve
+      tags:
+      - appareils
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesAppareil'
+          description: ''
+    put:
+      operationId: appareils_courant_preferences_update
+      tags:
+      - appareils
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferencesAppareil'
+        required: true
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesAppareil'
+          description: ''
   /api/v1/auth/connexion:
     post:
       operationId: auth_connexion_create
@@ -243,6 +276,47 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/compte:
+    get:
+      operationId: compte_retrieve
+      tags:
+      - compte
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompteDetail'
+          description: ''
+    patch:
+      operationId: compte_partial_update
+      tags:
+      - compte
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCompteModification'
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Compte'
+          description: ''
+    delete:
+      operationId: compte_destroy
+      tags:
+      - compte
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/compte/cle-recuperation/confirmer:
     post:
       operationId: compte_cle_recuperation_confirmer_create
@@ -253,6 +327,42 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/compte/email:
+    post:
+      operationId: compte_email_create
+      tags:
+      - compte
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangementEmail'
+        required: true
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/compte/email/verifier:
+    post:
+      operationId: compte_email_verifier_create
+      tags:
+      - compte
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeEmail'
+        required: true
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Compte'
+          description: ''
   /api/v1/compte/enveloppe-recuperation:
     get:
       operationId: compte_enveloppe_recuperation_retrieve
@@ -282,6 +392,112 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/compte/google:
+    post:
+      operationId: compte_google_create
+      tags:
+      - compte
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LiaisonGoogle'
+        required: true
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+    delete:
+      operationId: compte_google_destroy
+      tags:
+      - compte
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/compte/mot-de-passe:
+    post:
+      operationId: compte_mot_de_passe_create
+      tags:
+      - compte
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangementMotDePasse'
+        required: true
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/compte/preferences:
+    get:
+      operationId: compte_preferences_retrieve
+      tags:
+      - compte
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesCompte'
+          description: ''
+    put:
+      operationId: compte_preferences_update
+      tags:
+      - compte
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferencesCompte'
+        required: true
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesCompte'
+          description: ''
+  /api/v1/conditions/accepter:
+    post:
+      operationId: conditions_accepter_create
+      tags:
+      - conditions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptationConditions'
+        required: true
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/conditions/actuelles:
+    get:
+      operationId: conditions_actuelles_list
+      tags:
+      - conditions
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VersionConditions'
+          description: ''
   /api/v1/deverrouillages/{demande_id}/approuver:
     post:
       operationId: deverrouillages_approuver_create
@@ -354,6 +570,16 @@ paths:
           description: ''
 components:
   schemas:
+    AcceptationConditions:
+      type: object
+      properties:
+        versionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - versionIds
     Appareil:
       type: object
       properties:
@@ -456,6 +682,35 @@ components:
       required:
       - cleMaitreEnveloppee
       - codeAffiche
+    ChangementEmail:
+      type: object
+      properties:
+        motDePasse:
+          type: string
+          maxLength: 128
+        idTokenGoogle:
+          type: string
+          maxLength: 4096
+        nouvelEmail:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - nouvelEmail
+    ChangementMotDePasse:
+      type: object
+      properties:
+        ancienMotDePasse:
+          type: string
+          maxLength: 128
+        nouveauMotDePasse:
+          type: string
+          maxLength: 128
+        deconnecterAutresAppareils:
+          type: boolean
+          default: false
+      required:
+      - nouveauMotDePasse
     ClesInitiales:
       type: object
       properties:
@@ -472,6 +727,13 @@ components:
       - clePubliqueVerification
       - enveloppeAppareil
       - enveloppeRecuperation
+    CodeEmail:
+      type: object
+      properties:
+        code:
+          type: string
+      required:
+      - code
     Compte:
       type: object
       properties:
@@ -491,7 +753,7 @@ components:
           readOnly: true
         statut:
           allOf:
-          - $ref: '#/components/schemas/CompteStatutEnum'
+          - $ref: '#/components/schemas/Statut71aEnum'
           readOnly: true
         aMotDePasse:
           type: boolean
@@ -518,18 +780,57 @@ components:
       - role
       - statut
       - suppressionPrevueLe
-    CompteStatutEnum:
-      enum:
-      - EN_ATTENTE_VERIFICATION
-      - ACTIF
-      - SUSPENDU
-      - SUPPRESSION_PROGRAMMEE
-      type: string
-      description: |-
-        * `EN_ATTENTE_VERIFICATION` - En Attente Verification
-        * `ACTIF` - Actif
-        * `SUSPENDU` - Suspendu
-        * `SUPPRESSION_PROGRAMMEE` - Suppression Programmee
+    CompteDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        nomAffichage:
+          type: string
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
+        statut:
+          allOf:
+          - $ref: '#/components/schemas/Statut71aEnum'
+          readOnly: true
+        aMotDePasse:
+          type: boolean
+          readOnly: true
+        googleLie:
+          type: boolean
+        cleRecuperationConfirmee:
+          type: boolean
+          readOnly: true
+        suppressionPrevueLe:
+          type: string
+          format: date-time
+        creeLe:
+          type: string
+          format: date-time
+        conditionsAAccepter:
+          type: array
+          items: {}
+          readOnly: true
+      required:
+      - aMotDePasse
+      - cleRecuperationConfirmee
+      - conditionsAAccepter
+      - creeLe
+      - email
+      - googleLie
+      - id
+      - nomAffichage
+      - role
+      - statut
+      - suppressionPrevueLe
     Connexion:
       type: object
       properties:
@@ -684,6 +985,36 @@ components:
           format: uuid
       required:
       - compteId
+    LangueEnum:
+      enum:
+      - fr
+      - en
+      type: string
+      description: |-
+        * `fr` - Fr
+        * `en` - En
+    LiaisonGoogle:
+      type: object
+      properties:
+        idTokenGoogle:
+          type: string
+      required:
+      - idTokenGoogle
+    NotificationsActivesEnum:
+      enum:
+      - RAPPELS
+      - ENVOIS_APPAREILS
+      - NOUVEL_APPAREIL
+      - SECURITE
+      type: string
+      description: |-
+        * `RAPPELS` - Rappels
+        * `ENVOIS_APPAREILS` - Envois Appareils
+        * `NOUVEL_APPAREIL` - Nouvel Appareil
+        * `SECURITE` - Securite
+    NullEnum:
+      enum:
+      - null
     Oubli:
       type: object
       properties:
@@ -693,6 +1024,12 @@ components:
           maxLength: 254
       required:
       - email
+    PatchedCompteModification:
+      type: object
+      properties:
+        nomAffichage:
+          type: string
+          maxLength: 100
     PatchedRenommer:
       type: object
       properties:
@@ -700,6 +1037,64 @@ components:
           type: string
           maxLength: 100
           minLength: 1
+    PreferencesAppareil:
+      type: object
+      properties:
+        raccourciHistorique:
+          type: string
+          maxLength: 40
+        raccourciCaptureRapide:
+          type: string
+          maxLength: 40
+        demarrageAuto:
+          type: boolean
+        capturePressePapierEnPause:
+          type: boolean
+        notificationsActives:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationsActivesEnum'
+          maxItems: 10
+        verrouLocal:
+          $ref: '#/components/schemas/VerrouLocalEnum'
+        jetonPush:
+          type: string
+          writeOnly: true
+          nullable: true
+          maxLength: 4096
+        typePush:
+          writeOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/TypePushEnum'
+          - $ref: '#/components/schemas/NullEnum'
+      required:
+      - capturePressePapierEnPause
+      - demarrageAuto
+      - notificationsActives
+      - raccourciCaptureRapide
+      - raccourciHistorique
+      - verrouLocal
+    PreferencesCompte:
+      type: object
+      properties:
+        theme:
+          $ref: '#/components/schemas/ThemeEnum'
+        langue:
+          $ref: '#/components/schemas/LangueEnum'
+        fuseauHoraire:
+          type: string
+          maxLength: 64
+        retentionPressePapier:
+          $ref: '#/components/schemas/RetentionPressePapierEnum'
+        retentionVersions:
+          $ref: '#/components/schemas/RetentionVersionsEnum'
+      required:
+      - fuseauHoraire
+      - langue
+      - retentionPressePapier
+      - retentionVersions
+      - theme
     Recuperation:
       type: object
       properties:
@@ -776,6 +1171,42 @@ components:
       - appareil
       - compte
       - session
+    RetentionPressePapierEnum:
+      enum:
+      - INFINIE
+      - J90
+      - J30
+      - J7
+      - H24
+      - H1
+      - MIN30
+      type: string
+      description: |-
+        * `INFINIE` - Infinie
+        * `J90` - J90
+        * `J30` - J30
+        * `J7` - J7
+        * `H24` - H24
+        * `H1` - H1
+        * `MIN30` - Min30
+    RetentionVersionsEnum:
+      enum:
+      - INFINIE
+      - J90
+      - J30
+      - J7
+      - H24
+      - H1
+      - MIN30
+      type: string
+      description: |-
+        * `INFINIE` - Infinie
+        * `J90` - J90
+        * `J30` - J30
+        * `J7` - J7
+        * `H24` - H24
+        * `H1` - H1
+        * `MIN30` - Min30
     RoleEnum:
       enum:
       - UTILISATEUR
@@ -816,6 +1247,28 @@ components:
       required:
       - expireLe
       - jeton
+    Statut71aEnum:
+      enum:
+      - EN_ATTENTE_VERIFICATION
+      - ACTIF
+      - SUSPENDU
+      - SUPPRESSION_PROGRAMMEE
+      type: string
+      description: |-
+        * `EN_ATTENTE_VERIFICATION` - En Attente Verification
+        * `ACTIF` - Actif
+        * `SUSPENDU` - Suspendu
+        * `SUPPRESSION_PROGRAMMEE` - Suppression Programmee
+    ThemeEnum:
+      enum:
+      - CLAIR
+      - SOMBRE
+      - SYSTEME
+      type: string
+      description: |-
+        * `CLAIR` - Clair
+        * `SOMBRE` - Sombre
+        * `SYSTEME` - Systeme
     TypeAppareil:
       enum:
       - WEB
@@ -826,6 +1279,14 @@ components:
         * `WEB` - Web
         * `MOBILE` - Mobile
         * `DESKTOP` - Desktop
+    TypePushEnum:
+      enum:
+      - FCM
+      - WEB_PUSH
+      type: string
+      description: |-
+        * `FCM` - Fcm
+        * `WEB_PUSH` - Web Push
     Verification:
       type: object
       properties:
@@ -858,6 +1319,48 @@ components:
       - base
       - redis
       - stockage
+    VerrouLocalEnum:
+      enum:
+      - AUCUN
+      - CODE_PIN
+      - BIOMETRIE
+      type: string
+      description: |-
+        * `AUCUN` - Aucun
+        * `CODE_PIN` - Code Pin
+        * `BIOMETRIE` - Biometrie
+    VersionConditions:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/VersionConditionsTypeEnum'
+        numero:
+          type: string
+          maxLength: 20
+        publieeLe:
+          type: string
+          format: date-time
+        urlTexte:
+          type: string
+          format: uri
+      required:
+      - id
+      - numero
+      - publieeLe
+      - type
+      - urlTexte
+    VersionConditionsTypeEnum:
+      enum:
+      - CONDITIONS_UTILISATION
+      - POLITIQUE_CONFIDENTIALITE
+      type: string
+      description: |-
+        * `CONDITIONS_UTILISATION` - Conditions Utilisation
+        * `POLITIQUE_CONFIDENTIALITE` - Politique Confidentialite
   securitySchemes:
     session:
       type: http

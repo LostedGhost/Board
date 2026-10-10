@@ -18,3 +18,8 @@
 | D11 | 10/10 | Enveloppes invalidées | Leur contenu est vidé, pas seulement marqué. | Une fuite de la base ne les rend pas exploitables. |
 | D12 | 10/10 | Nouvelle clé de récupération | Doit être reconfirmée comme sauvegardée. | Même règle que A1. |
 | D13 | 10/10 | `GET /appareils` | Les appareils révoqués ne sont pas listés. | Ils ne servent plus à rien côté utilisateur. |
+| D14 | 10/10 | Actions sensibles d'un compte Google sans mot de passe (changer d'e-mail, supprimer le compte) | Confirmation par un jeton Google récent. | Même logique que D8. |
+| D15 | 10/10 | `PATCH`/`DELETE /compte` | Restent possibles avec des conditions non acceptées ou une clé non confirmée. | Refuser les nouvelles conditions doit permettre de partir. |
+| D16 | 10/10 | Notifications | Toutes les catégories actives par défaut ; `SECURITE` est toujours réactivée. | I7. |
+| D17 | 10/10 | Jeton push | Envoyé par `PUT /appareils/courant/preferences`, jamais renvoyé dans les réponses. | C'est un secret de l'appareil. |
+| D18 | 10/10 | Durée « 1 h » | Refusée pour le presse-papier, acceptée pour les versions. | Respect exact de B4 et de C3. |

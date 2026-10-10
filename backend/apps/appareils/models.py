@@ -39,6 +39,17 @@ class StatutDemande(models.TextChoices):
     EXPIREE = "EXPIREE"
 
 
+class CategorieNotification(models.TextChoices):
+    RAPPELS = "RAPPELS"
+    ENVOIS_APPAREILS = "ENVOIS_APPAREILS"
+    NOUVEL_APPAREIL = "NOUVEL_APPAREIL"
+    SECURITE = "SECURITE"
+
+
+def notifications_par_defaut():
+    return [c.value for c in CategorieNotification]
+
+
 class VerrouLocal(models.TextChoices):
     AUCUN = "AUCUN"
     CODE_PIN = "CODE_PIN"
@@ -112,7 +123,7 @@ class PreferencesAppareil(models.Model):
     raccourci_capture_rapide = models.CharField(max_length=40, default="Ctrl+Alt+N")
     demarrage_auto = models.BooleanField(default=True)
     capture_presse_papier_en_pause = models.BooleanField(default=False)
-    notifications_actives = models.JSONField(default=list)
+    notifications_actives = models.JSONField(default=notifications_par_defaut)
     verrou_local = models.CharField(max_length=10, choices=VerrouLocal.choices, default=VerrouLocal.AUCUN)
 
     class Meta:

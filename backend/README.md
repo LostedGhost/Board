@@ -69,6 +69,7 @@ uv run python manage.py spectacular --file ../docs/openapi.yaml
 | 2.2 | `POST /api/v1/auth/mot-de-passe/oubli` | ✅ livré, testé |
 | 2.2 | `POST /api/v1/auth/mot-de-passe/reinitialiser` | ✅ livré, testé |
 | 2.3 | `GET /appareils`, `PATCH`/`DELETE /appareils/{id}`, `GET /appareils/courant/enveloppe`, `POST /appareils/courant/deverrouillage`, `GET /deverrouillages/en-attente`, `POST /deverrouillages/{id}/approuver`, `POST /deverrouillages/{id}/refuser`, `GET`/`PUT /compte/enveloppe-recuperation`, `POST /appareils/courant/deverrouiller-par-recuperation` | ✅ livré, testé |
+| 2.4 | `GET`/`PATCH`/`DELETE /compte`, `POST /compte/mot-de-passe`, `POST /compte/email`, `POST /compte/email/verifier`, `POST`/`DELETE /compte/google`, `GET`/`PUT /compte/preferences`, `GET`/`PUT /appareils/courant/preferences`, `GET /conditions/actuelles`, `POST /conditions/accepter` | ✅ livré, testé |
 
 ### `GET /api/v1/health` (public)
 
@@ -142,3 +143,10 @@ Les corps de requête et de réponse sont ceux du contrat (`docs/05-contrat-api.
 - Événements temps réel publiés **après validation** de la transaction (`commun/evenements.py`).
 
 Revue de sécurité : contrôle d'accès par compte sur chaque identifiant (404 sinon) ; un appareil non déverrouillé ne peut ni approuver ni révoquer ; preuve cryptographique de possession de la clé maître ; défis à usage unique ; comparaisons en temps constant.
+
+## Lot 2.4 — Compte, préférences, conditions
+
+- Changer d'e-mail : code envoyé à la **nouvelle** adresse, alerte à l'**ancienne** ; le changement ne prend effet qu'après le code.
+- Suppression : statut `SUPPRESSION_PROGRAMMEE` pendant 30 jours ; se reconnecter l'annule (lot 2.2) ; l'effacement définitif est fait par une tâche planifiée (lot « tâches »).
+- Préférences d'appareil : le jeton push est accepté en écriture seulement ; `SECURITE` reste toujours active.
+- Nouvelles conditions publiées → toutes les routes 🔐 répondent `403 conditions_a_accepter`, sauf `GET`/`PATCH`/`DELETE /compte` et `/conditions/*`.
