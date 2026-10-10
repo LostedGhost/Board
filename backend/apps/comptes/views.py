@@ -1,4 +1,4 @@
-"""Contrat 2.1 — inscription et vérification (A1, A1b)."""
+"""Contrat 2.1 (inscription, vérification) et 2.2 (connexion, mot de passe oublié)."""
 
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
@@ -7,15 +7,18 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.appareils.permissions import AppareilDeverrouille
-from apps.comptes import services
+from apps.appareils.permissions import AppareilDeverrouille, SessionRequise
+from apps.comptes import connexion, services
 from apps.comptes.emails import envoyer_code, langue_de
 from apps.comptes.google import verifier_id_token
 from apps.comptes.models import TypeCode
 from apps.comptes import codes
 from apps.comptes.serializers import (
     CompteSerializer,
+    ConnexionSerializer,
     GoogleSerializer,
+    OubliSerializer,
+    ReinitialisationSerializer,
     ReponseSessionSerializer,
     InscriptionSerializer,
     RenvoyerCodeSerializer,
@@ -118,4 +121,55 @@ class ConfirmerCleRecuperationView(APIView):
     @extend_schema(request=None, responses={204: None})
     def post(self, request):
         services.confirmer_cle_recuperation(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# --- Contrat 2.2 — connexion, déconnexion, mot de passe oublié (A2, A3, I26) ---------------
+
+
+class ConnexionView(VuePublique):
+    @extend_schema(request=ConnexionSerializer, responses={200: ReponseSessionSerializer})
+    def post(self, request):
+        limiter("connexion_ip", ip_client(request), maximum=50, fenetre_s=900)
+        s = ConnexionSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        d = s.validated_data
+        compte, appareil, jeton, expire_le = connexion.connecter(
+            d["email"], d["motDePasse"], d["appareil"], langue_de(request)
+        )
+        return reponse_session(compte, appareil, jeton, expire_le)
+
+
+class DeconnexionView(APIView):
+    permission_classes = [SessionRequise]
+
+    @extend_schema(request=None, responses={204: None})
+    def post(self, request):
+        connexion.deconnecter(request.auth)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class OubliMotDePasseView(VuePublique):
+    @extend_schema(request=OubliSerializer, responses={204: None})
+    def post(self, request):
+        s = OubliSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        email = s.validated_data["email"].strip().lower()
+        limiter("oubli_ip", ip_client(request), maximum=20, fenetre_s=3600)
+        limiter("oubli_email", email, maximum=5, fenetre_s=3600)
+        resultat = connexion.demander_reinitialisation(email)
+        if resultat is not None:
+            compte, code = resultat
+            envoyer_code(compte.email, TypeCode.REINITIALISATION_MOT_DE_PASSE, code, langue_de(request))
+        return Response(status=status.HTTP_204_NO_CONTENT)  # toujours : ne révèle pas l'existence du compte
+
+
+class ReinitialisationView(VuePublique):
+    @extend_schema(request=ReinitialisationSerializer, responses={204: None})
+    def post(self, request):
+        limiter("reinitialisation_ip", ip_client(request), maximum=30, fenetre_s=900)
+        s = ReinitialisationSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        d = s.validated_data
+        connexion.reinitialiser_mot_de_passe(d["email"], d["code"], d["nouveauMotDePasse"])
         return Response(status=status.HTTP_204_NO_CONTENT)

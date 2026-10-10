@@ -64,6 +64,10 @@ uv run python manage.py spectacular --file ../docs/openapi.yaml
 | 2.1 | `POST /api/v1/auth/inscription/verifier` | ✅ livré, testé |
 | 2.1 | `POST /api/v1/auth/google` | ✅ livré, testé |
 | 2.1 | `POST /api/v1/compte/cle-recuperation/confirmer` | ✅ livré, testé |
+| 2.2 | `POST /api/v1/auth/connexion` | ✅ livré, testé |
+| 2.2 | `POST /api/v1/auth/deconnexion` | ✅ livré, testé |
+| 2.2 | `POST /api/v1/auth/mot-de-passe/oubli` | ✅ livré, testé |
+| 2.2 | `POST /api/v1/auth/mot-de-passe/reinitialiser` | ✅ livré, testé |
 
 ### `GET /api/v1/health` (public)
 
@@ -109,3 +113,21 @@ Les corps de requête et de réponse sont ceux du contrat (`docs/05-contrat-api.
 | Authentification | Argon2 pour les mots de passe ; codes stockés en HMAC-SHA256 ; limitation de débit sur l'inscription, la vérification, le renvoi de code et Google ; réponses identiques pour un e-mail inconnu |
 | Configuration | secrets dans `.env` (non versionné) ; erreurs au format commun, sans trace interne |
 | API | sérialiseurs explicites (pas d'affectation massive : `role`/`statut` ignorés, testé) ; tailles des clés contrôlées après décodage |
+
+## Lot 2.2 — Connexion, déconnexion, mot de passe oublié
+
+### Précisions apportées au contrat
+- **Compte jamais vérifié + bon mot de passe** → `403 email_non_verifie`, et un nouveau code d'inscription est envoyé. Avec un mauvais mot de passe, la réponse reste `401 identifiants_incorrects` : rien n'est révélé.
+- **Réinitialisation** → `204` sans corps. Le rappel « données lisibles seulement avec la clé de récupération ou un autre appareil » (A3) est affiché par l'app, qui le connaît d'avance.
+- Après une réinitialisation, **toutes les sessions sont fermées**, mais les appareils déjà déverrouillés restent ACTIF : ils gardent leur clé locale et retrouvent l'accès en se reconnectant.
+- Se connecter avec `{ appareilId }` **remplace** la session de cet appareil (l'ancien jeton cesse de fonctionner).
+- Un compte Google sans mot de passe ne peut pas se connecter par mot de passe (`401`), mais peut en définir un via « mot de passe oublié ».
+
+### Revue de sécurité
+| Catégorie | Mesure |
+|---|---|
+| Contrôle d'accès | un `appareilId` d'un autre compte → `404` ; appareil révoqué → `403` |
+| Authentification | 5 échecs en 15 min par adresse → `423` pendant 15 min (même avec le bon mot de passe) ; compteur remis à zéro après un succès ou une réinitialisation ; limite supplémentaire par IP |
+| Énumération de comptes | e-mail inconnu, mauvais mot de passe ou compte Google seul : même code, même message et **même coût de calcul** (hash Argon2 factice) ; « mot de passe oublié » répond toujours `204` |
+| Logique métier | un code d'inscription n'est pas accepté pour réinitialiser un mot de passe (types séparés) ; 5 essais par code |
+| Session | la déconnexion supprime la session côté serveur (le jeton devient invalide immédiatement) |

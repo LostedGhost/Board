@@ -61,6 +61,22 @@ class ChampAppareil(serializers.Field):
         return s.validated_data
 
 
+class ConnexionSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+    motDePasse = serializers.CharField(max_length=128, trim_whitespace=False)
+    appareil = ChampAppareil()
+
+
+class OubliSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+
+
+class ReinitialisationSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+    code = serializers.RegexField(r"^\d{6}$")
+    nouveauMotDePasse = serializers.CharField(max_length=128, trim_whitespace=False, validators=[valider_mot_de_passe])
+
+
 class GoogleSerializer(serializers.Serializer):
     idTokenGoogle = serializers.CharField(max_length=4096)
     appareil = ChampAppareil()

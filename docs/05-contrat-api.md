@@ -41,7 +41,7 @@ Le client se fie à `code` (stable dans le temps), jamais à `message`.
 |---|---|
 | 400 | `requete_invalide` |
 | 401 | `non_authentifie`, `session_expiree`, `identifiants_incorrects` |
-| 403 | `interdit`, `cle_recuperation_non_confirmee`, `compte_suspendu`, `appareil_revoque`, `appareil_non_deverrouille`, `conditions_a_accepter`, `reserve_aux_comptes` |
+| 403 | `interdit`, `email_non_verifie`, `cle_recuperation_non_confirmee`, `compte_suspendu`, `appareil_revoque`, `appareil_non_deverrouille`, `conditions_a_accepter`, `reserve_aux_comptes` |
 | 404 | `introuvable` (y compris pour la ressource d'un autre compte, pour ne pas révéler qu'elle existe) |
 | 409 | `email_deja_utilise`, `limite_appareils`, `deja_traite`, `version_client_obsolete` |
 | 410 | `code_expire`, `lien_expire` |

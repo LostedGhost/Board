@@ -3,6 +3,36 @@ info:
   title: LuluBoard API
   version: 0.1.0
 paths:
+  /api/v1/auth/connexion:
+    post:
+      operationId: auth_connexion_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Connexion'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReponseSession'
+          description: ''
+  /api/v1/auth/deconnexion:
+    post:
+      operationId: auth_deconnexion_create
+      tags:
+      - auth
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/auth/google:
     post:
       operationId: auth_google_create
@@ -63,6 +93,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReponseSession'
           description: ''
+  /api/v1/auth/mot-de-passe/oubli:
+    post:
+      operationId: auth_mot_de_passe_oubli_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Oubli'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/mot-de-passe/reinitialiser:
+    post:
+      operationId: auth_mot_de_passe_reinitialiser_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reinitialisation'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
   /api/v1/auth/renvoyer-code:
     post:
       operationId: auth_renvoyer_code_create
@@ -269,6 +331,22 @@ components:
         * `ACTIF` - Actif
         * `SUSPENDU` - Suspendu
         * `SUPPRESSION_PROGRAMMEE` - Suppression Programmee
+    Connexion:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        motDePasse:
+          type: string
+          maxLength: 128
+        appareil:
+          $ref: '#/components/schemas/AppareilNouveauOuExistant'
+      required:
+      - appareil
+      - email
+      - motDePasse
     Google:
       type: object
       properties:
@@ -336,6 +414,32 @@ components:
           format: uuid
       required:
       - compteId
+    Oubli:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - email
+    Reinitialisation:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        code:
+          type: string
+          pattern: ^\d{6}$
+        nouveauMotDePasse:
+          type: string
+          maxLength: 128
+      required:
+      - code
+      - email
+      - nouveauMotDePasse
     RenvoyerCode:
       type: object
       properties:
