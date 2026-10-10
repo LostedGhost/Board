@@ -5,154 +5,679 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LuluBoard — Chiffrez ce que vous copiez</title>
+  <meta name="description"
+    content="LuluBoard stocke vos contenus localement et les synchronise entre vos appareils, chiffrés de bout en bout. Le serveur ne lit jamais vos données." />
+
+  <!-- Fonts : Rubik (titres & corps) · Itim (marque uniquement) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Itim&family=Rubik:wght@300..900&display=swap" />
+
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+
   <style>
+    /* ── DESIGN TOKENS — LuluFiles System ── */
     :root {
-      --bg: #1A1B1E;
-      --surface: #25262A;
-      --primary: #7C5CFF;
-      --text: #E8E8EC;
+      --bg:         #020617;
+      --primary:    #0F172A;
+      --secondary:  #1E293B;
+      --accent:     #22C55E;
+      --accent-dim: #16A34A;
+      --fg:         #F8FAFC;
+      --muted:      #1A1E2F;
+      --border:     #334155;
+      --text-soft:  #94A3B8;
+      --text-dim:   #64748B;
+
+      --font-display: 'Rubik', system-ui, sans-serif;
+      --font-body:    'Rubik', system-ui, sans-serif;
+      --font-brand:   'Itim', cursive;
+
+      --sp-xs:  0.25rem;
+      --sp-sm:  0.5rem;
+      --sp-md:  1rem;
+      --sp-lg:  1.5rem;
+      --sp-xl:  2rem;
+      --sp-2xl: 3rem;
+      --sp-3xl: 4rem;
+
+      --r-sm: 6px;
+      --r-md: 8px;
+      --r-lg: 12px;
+      --r-xl: 16px;
+
+      --t-fast:   150ms ease;
+      --t-normal: 200ms ease;
+      --t-slow:   300ms ease;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
     body {
-      font-family: system-ui, sans-serif;
+      font-family: var(--font-body);
       background: var(--bg);
-      color: var(--text);
+      color: var(--fg);
       line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    img, svg { display: block; }
+    a { color: inherit; text-decoration: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     }
 
-    header {
-      padding: 2rem;
-      text-align: center;
-      background: var(--surface);
-      border-bottom: 1px solid #3A3C42;
-    }
+    /* ── Canvas background ── */
+    #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 
-    header h1 {
-      font-size: 2.5rem;
-      color: var(--primary);
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 2rem;
+      background: rgba(2,6,23,0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-
-    .hero {
-      max-width: 800px;
-      margin: 4rem auto;
-      padding: 0 1.5rem;
-      text-align: center;
+    .nav-brand {
+      font-family: var(--font-brand); font-size: 1.6rem;
+      color: var(--accent); letter-spacing: 0.01em; cursor: default;
     }
-
-    .hero h2 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
+    .nav-links { display: flex; gap: var(--sp-xl); list-style: none; }
+    .nav-links a {
+      color: var(--text-soft); font-size: 0.9rem; font-weight: 400;
+      cursor: pointer; transition: color var(--t-normal);
+      position: relative; padding-bottom: 2px;
     }
-
-    .hero p {
-      font-size: 1.2rem;
-      color: #9A9AA5;
-      margin-bottom: 2rem;
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: 0; left: 0;
+      width: 0; height: 1px; background: var(--accent);
+      transition: width var(--t-normal);
     }
+    .nav-links a:hover { color: var(--fg); }
+    .nav-links a:hover::after { width: 100%; }
 
-    .cta {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
+    /* ── Buttons ── */
     .btn {
-      padding: 0.75rem 2rem;
-      border-radius: 999px;
-      font-size: 1rem;
-      text-decoration: none;
-      cursor: pointer;
-      border: none;
+      display: inline-flex; align-items: center; gap: var(--sp-sm);
+      padding: 0.6rem 1.4rem; border-radius: var(--r-md);
+      font-family: var(--font-body); font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all var(--t-normal);
     }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover {
+      background: var(--accent-dim);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(34,197,94,0.35);
     }
-
+    .btn-primary:active { transform: translateY(0); }
     .btn-ghost {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid #3A3C42;
+      background: rgba(255,255,255,0.05); color: var(--fg);
+      border: 1px solid rgba(255,255,255,0.12);
     }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(255,255,255,0.25);
+      transform: translateY(-1px);
+    }
+    .btn-ghost:active { transform: translateY(0); }
 
-    .features {
-      max-width: 1000px;
-      margin: 4rem auto;
-      padding: 0 1.5rem;
+    /* ── Hero ── */
+    .hero {
+      position: relative; z-index: 1; min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 8rem var(--sp-lg) var(--sp-3xl);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: var(--sp-sm);
+      padding: 0.35rem 1rem; border-radius: 999px;
+      background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
+      color: var(--accent); font-size: 0.8rem; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: var(--sp-xl); opacity: 0;
+    }
+    .badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      font-weight: 800; letter-spacing: -0.04em; line-height: 1.1;
+      margin-bottom: var(--sp-xl); max-width: 800px; opacity: 0;
+    }
+    .hero h1 .accent { color: var(--accent); }
+    .hero-sub {
+      font-size: clamp(1rem,2vw,1.25rem); color: var(--text-soft);
+      max-width: 560px; margin: 0 auto var(--sp-2xl);
+      line-height: 1.7; opacity: 0;
+    }
+    .hero-cta { display: flex; gap: var(--sp-md); justify-content: center; flex-wrap: wrap; opacity: 0; }
+    .hero-cta .btn { padding: 0.8rem 1.8rem; font-size: 0.95rem; }
+
+    /* ── Trust bar ── */
+    .trust-bar {
+      position: relative; z-index: 1;
+      display: flex; justify-content: center; gap: var(--sp-2xl);
+      flex-wrap: wrap; padding: var(--sp-lg);
+      border-top: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      max-width: 900px; margin: 0 auto;
+    }
+    .trust-item {
+      display: flex; align-items: center; gap: var(--sp-sm);
+      color: var(--text-dim); font-size: 0.85rem; font-weight: 500;
+    }
+    .trust-item svg { color: var(--accent); flex-shrink: 0; }
+
+    /* ── Section shell ── */
+    .section {
+      position: relative; z-index: 1; max-width: 1100px;
+      margin: var(--sp-3xl) auto; padding: 0 var(--sp-lg);
+    }
+    .section-label {
+      display: inline-flex; align-items: center; gap: var(--sp-sm);
+      color: var(--accent); font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: var(--sp-md);
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem,3vw,2.6rem);
+      font-weight: 700; letter-spacing: -0.03em; line-height: 1.2;
+      margin-bottom: var(--sp-md);
+    }
+    .section-desc {
+      color: var(--text-soft); font-size: 1.05rem;
+      max-width: 520px; line-height: 1.7;
+    }
+    .section-header { margin-bottom: var(--sp-2xl); }
+    .section-header.centered { text-align: center; }
+    .section-header.centered .section-label { justify-content: center; }
+    .section-header.centered .section-desc { margin: 0 auto; }
+
+    /* ── Cards ── */
+    .card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+      gap: var(--sp-lg);
     }
+    .card {
+      background: rgba(15,23,42,0.6);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--r-xl); padding: var(--sp-xl) var(--sp-lg);
+      transition: transform var(--t-slow), box-shadow var(--t-slow), border-color var(--t-slow);
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(34,197,94,0.15);
+      border-color: rgba(34,197,94,0.25);
+    }
+    .card-icon {
+      width: 44px; height: 44px; border-radius: var(--r-md);
+      background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: var(--sp-lg); color: var(--accent);
+      transition: background var(--t-normal), border-color var(--t-normal);
+    }
+    .card:hover .card-icon {
+      background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.4);
+    }
+    .card h3 { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: var(--sp-sm); }
+    .card p { color: var(--text-soft); font-size: 0.92rem; line-height: 1.65; }
 
+    /* ── Features ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+      gap: var(--sp-lg);
+    }
     .feature {
-      background: var(--surface);
-      padding: 1.5rem;
-      border-radius: 12px;
-      border: 1px solid #3A3C42;
+      display: flex; gap: var(--sp-lg); padding: var(--sp-xl);
+      background: rgba(15,23,42,0.5);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.06); border-radius: var(--r-lg);
+      transition: border-color var(--t-slow), transform var(--t-slow);
     }
-
-    .feature h3 {
-      color: var(--primary);
-      margin-bottom: 0.5rem;
+    .feature:hover { border-color: rgba(34,197,94,0.2); transform: translateY(-4px); }
+    .feature-icon {
+      flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--r-md);
+      background: rgba(34,197,94,0.08);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent); margin-top: 2px;
     }
+    .feature h3 { font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-xs); }
+    .feature p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.65; }
 
-    footer {
+    /* ── Stats ── */
+    .stats-bar {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+      gap: 1px; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--r-xl); overflow: hidden;
+      max-width: 900px; margin: 6rem auto;
+    }
+    .stat {
+      background: rgba(2,6,23,0.9); backdrop-filter: blur(8px);
+      padding: var(--sp-2xl) var(--sp-xl); text-align: center;
+    }
+    .stat-value {
+      font-size: 2.8rem; font-weight: 800; color: var(--accent);
+      letter-spacing: -0.04em; line-height: 1; margin-bottom: var(--sp-sm);
+    }
+    .stat-label { color: var(--text-soft); font-size: 0.88rem; line-height: 1.4; }
+
+    /* ── CTA band ── */
+    .cta-band {
+      position: relative; z-index: 1; max-width: 820px;
+      margin: 6rem auto; padding: var(--sp-3xl) var(--sp-2xl);
       text-align: center;
-      padding: 2rem;
-      color: #9A9AA5;
-      border-top: 1px solid #3A3C42;
-      margin-top: 4rem;
+      background: rgba(15,23,42,0.7);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(34,197,94,0.15); border-radius: 24px;
+      box-shadow: 0 0 80px rgba(34,197,94,0.05);
     }
+    .cta-band h2 {
+      font-family: var(--font-display); font-size: clamp(1.7rem,3vw,2.4rem);
+      font-weight: 700; letter-spacing: -0.03em; margin-bottom: var(--sp-md);
+    }
+    .cta-band > p { color: var(--text-soft); margin-bottom: var(--sp-2xl); }
+    .cta-buttons { display: flex; gap: var(--sp-md); justify-content: center; flex-wrap: wrap; }
+
+    /* ── Footer ── */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: var(--sp-2xl) var(--sp-lg);
+      display: flex; flex-direction: column; align-items: center; gap: var(--sp-lg);
+    }
+    .footer-brand { font-family: var(--font-brand); font-size: 1.4rem; color: var(--accent); }
+    .footer-links { display: flex; gap: var(--sp-xl); flex-wrap: wrap; justify-content: center; }
+    .footer-links a {
+      color: var(--text-dim); font-size: 0.85rem;
+      transition: color var(--t-normal); cursor: pointer;
+    }
+    .footer-links a:hover { color: var(--text-soft); }
+    .footer-copy { color: var(--text-dim); font-size: 0.8rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero { padding-top: 7rem; }
+      .trust-bar { gap: var(--sp-lg); }
+      .cta-band { margin: var(--sp-2xl) var(--sp-lg); padding: var(--sp-2xl) var(--sp-lg); }
+      .stats-bar { margin: var(--sp-2xl) var(--sp-lg); }
+      .section { margin: var(--sp-2xl) auto; }
+    }
+    @media (max-width: 480px) { .feature { flex-direction: column; } }
   </style>
 </head>
 
 <body>
-  <header>
-    <h1>LuluBoard</h1>
-    <p>Votre presse-papier, notes, snippets et tâches, chiffrés de bout en bout.</p>
-  </header>
+  <canvas id="bg-canvas"></canvas>
 
+  <!-- NAV -->
+  <nav>
+    <span class="nav-brand">LuluBoard</span>
+    <ul class="nav-links">
+      <li><a href="#fonctionnalites">Fonctionnalités</a></li>
+      <li><a href="#outils">Outils</a></li>
+      <li><a href="#securite">Sécurité</a></li>
+    </ul>
+    <a href="#" class="btn btn-primary" id="nav-cta">Créer un compte</a>
+  </nav>
+
+  <!-- HERO -->
   <section class="hero">
-    <h2>Chiffrez ce que vous copiez.</h2>
-    <p>LuluBoard stocke vos contenus localement et les synchronise entre vos appareils. Le serveur ne les lit jamais.
+    <div class="hero-badge" id="hero-badge">
+      <span class="badge-dot"></span>
+      Chiffrement bout en bout — libsodium
+    </div>
+    <h1 id="hero-h1">Chiffrez ce que vous<br><span class="accent">copiez.</span></h1>
+    <p class="hero-sub" id="hero-sub">
+      LuluBoard stocke vos contenus localement et les synchronise
+      entre vos appareils. Le serveur ne les lit jamais.
+      Vos données restent à vous, toujours.
     </p>
-    <div class="cta">
-      <a href="https://lulu.board" class="btn btn-primary">Créer un compte</a>
-      <a href="#" class="btn btn-ghost">Télécharger l'application</a>
+    <div class="hero-cta" id="hero-cta">
+      <a href="#" class="btn btn-primary" id="hero-btn-primary">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+        Créer un compte
+      </a>
+      <a href="#" class="btn btn-ghost" id="hero-btn-ghost">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Télécharger l'application
+      </a>
     </div>
   </section>
 
-  <section class="features">
-    <div class="feature">
-      <h3>🔐 Chiffrement E2EE</h3>
-      <p>Libsodium de bout en bout. Seul vous et vos appareils déverrouillés pouvez lire vos données.</p>
+  <!-- TRUST BAR -->
+  <div class="trust-bar">
+    <div class="trust-item">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+      </svg>
+      Zero-knowledge
     </div>
-    <div class="feature">
-      <h3>📱 Multi-appareils</h3>
-      <p>Synchronisation entre desktop, mobile et web. Jusqu'à 3 appareils par compte.</p>
+    <div class="trust-item">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+      </svg>
+      Offline-first
     </div>
-    <div class="feature">
-      <h3>🔌 Hors ligne</h3>
-      <p>Base locale offline-first. Tout fonctionne sans réseau et se synchronise automatiquement.</p>
+    <div class="trust-item">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+      </svg>
+      Multi-appareils
     </div>
-    <div class="feature">
-      <h3>🔗 Partage public</h3>
-      <p>Liens expirables et protégés par mot de passe, pour les fichiers et les post-it.</p>
+    <div class="trust-item">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+      </svg>
+      Open source
+    </div>
+  </div>
+
+  <!-- OUTILS -->
+  <section class="section" id="outils">
+    <div class="section-header centered">
+      <div class="section-label">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+        Vos outils
+      </div>
+      <h2 class="section-title">Tout ce qu'il vous faut,<br>rien que pour vous.</h2>
+      <p class="section-desc">Une interface fluide, une sécurité invisible. Vos données restent privées par défaut.</p>
+    </div>
+    <div class="card-grid" id="cards-grid">
+      <div class="card" tabindex="0">
+        <div class="card-icon" aria-hidden="true">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+        </div>
+        <h3>Presse-papier</h3>
+        <p>Collez, chiffrez, synchronisez. Vos copies restent privées sur tous vos appareils.</p>
+      </div>
+      <div class="card" tabindex="0">
+        <div class="card-icon" aria-hidden="true">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+        </div>
+        <h3>Notes &amp; Post-it</h3>
+        <p>Organisez vos idées en toute sécurité, partout où vous êtes.</p>
+      </div>
+      <div class="card" tabindex="0">
+        <div class="card-icon" aria-hidden="true">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+          </svg>
+        </div>
+        <h3>Tâches</h3>
+        <p>Suivez vos projets avec des listes chiffrées, des rappels et une synchro temps réel.</p>
+      </div>
+      <div class="card" tabindex="0">
+        <div class="card-icon" aria-hidden="true">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+        </div>
+        <h3>Partage sécurisé</h3>
+        <p>Liens expirables, protégés par Argon2id. Contrôle total sur ce que vous partagez.</p>
+      </div>
     </div>
   </section>
 
+  <!-- FEATURES -->
+  <section class="section" id="fonctionnalites">
+    <div class="section-header">
+      <div class="section-label">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Pourquoi LuluBoard
+      </div>
+      <h2 class="section-title">Conçu pour la confidentialité,<br>pas comme une option.</h2>
+      <p class="section-desc">Chaque fonctionnalité est bâtie autour du principe : le serveur ne doit rien savoir.</p>
+    </div>
+    <div class="features-grid" id="features-grid">
+      <div class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <div><h3>Chiffrement E2EE</h3><p>Libsodium de bout en bout. Seul vous et vos appareils déverrouillés peuvent lire vos données.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div><h3>Multi-appareils</h3><p>Synchronisation entre desktop, mobile et web. Jusqu'à 3 appareils, approbation par appareil de confiance.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M6.343 6.343a9 9 0 000 12.728M9.172 9.172a5 5 0 000 6.656M12 12h.01"/>
+          </svg>
+        </div>
+        <div><h3>Hors ligne d'abord</h3><p>Base locale offline-first. Tout fonctionne sans réseau. La synchro reprend à la reconnexion.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div><h3>Zero-knowledge</h3><p>Le serveur ne stocke jamais vos clés. Aucune lecture de vos contenus possible, même par nous.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+        </div>
+        <div><h3>Rappels intelligents</h3><p>Planificateur local sur desktop, push FCM sur mobile. Fonctionnel même sans compte Firebase.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+          </svg>
+        </div>
+        <div><h3>Export &amp; portabilité</h3><p>Exportez l'intégralité de vos données chiffrées à tout moment. Aucun verrouillage propriétaire.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="securite">
+    <div class="stat">
+      <div class="stat-value" data-target="100">0</div>
+      <div class="stat-label">% chiffrement<br>bout en bout</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">0</div>
+      <div class="stat-label">Données lues<br>par le serveur</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" data-target="3">0</div>
+      <div class="stat-label">Appareils max<br>par compte</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">&#8734;</div>
+      <div class="stat-label">Stockage local<br>illimité</div>
+    </div>
+  </div>
+
+  <!-- CTA BAND -->
+  <div class="cta-band" id="cta-band">
+    <h2>Prêt à reprendre<br>le contrôle de vos données ?</h2>
+    <p>Rejoignez LuluBoard — gratuit, sans publicité, respectueux de votre vie privée.</p>
+    <div class="cta-buttons">
+      <a href="#" class="btn btn-primary" id="cta-primary">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+        Créer un compte gratuit
+      </a>
+      <a href="#" class="btn btn-ghost" id="cta-ghost">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Télécharger l'app
+      </a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
   <footer>
-    <p>LuluBoard · Conformité APDP / RGPD · <a href="#" style="color:var(--primary)">Confidentialité</a> · <a href="#"
-        style="color:var(--primary)">Conditions</a></p>
+    <span class="footer-brand">LuluBoard</span>
+    <nav class="footer-links" aria-label="Liens du pied de page">
+      <a href="#">Confidentialité</a>
+      <a href="#">Conditions d'utilisation</a>
+      <a href="#">Support</a>
+      <a href="#">Conformité RGPD</a>
+    </nav>
+    <p class="footer-copy">&copy; 2026 LuluBoard &middot; Vos données restent les vôtres. Toujours.</p>
   </footer>
-</body>
 
+  <script>
+    // ── Mesh particle background ──────────────────────────────────────────────
+    (function () {
+      const canvas = document.getElementById('bg-canvas');
+      const ctx = canvas.getContext('2d');
+      let particles = [], mouse = { x: null, y: null }, raf;
+      const ACCENT = '34,197,94', BORDER = '51,65,85';
+
+      function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+      resize();
+      window.addEventListener('resize', () => { resize(); init(); });
+      window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+      window.addEventListener('mouseout', () => { mouse.x = mouse.y = null; });
+
+      class P {
+        constructor() { this.reset(); }
+        reset() {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+          this.s = Math.random() * 1.5 + 0.5;
+          this.vx = (Math.random() - 0.5) * 0.3;
+          this.vy = (Math.random() - 0.5) * 0.3;
+          this.c = Math.random() > 0.75 ? ACCENT : BORDER;
+        }
+        update() {
+          this.x += this.vx; this.y += this.vy;
+          if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+          if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+          if (mouse.x != null) {
+            const dx = mouse.x - this.x, dy = mouse.y - this.y, d = Math.hypot(dx, dy);
+            if (d < 100) { this.x -= dx * 0.015; this.y -= dy * 0.015; }
+          }
+        }
+        draw() {
+          ctx.fillStyle = `rgba(${this.c},${this.s * 0.35})`;
+          ctx.beginPath(); ctx.arc(this.x, this.y, this.s, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      function init() {
+        particles = [];
+        const n = Math.min(70, Math.floor(canvas.width * canvas.height / 16000));
+        for (let i = 0; i < n; i++) particles.push(new P());
+      }
+      init();
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particles.length; i++) {
+          particles[i].update(); particles[i].draw();
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
+            const d = Math.hypot(dx, dy);
+            if (d < 110) {
+              ctx.strokeStyle = `rgba(${BORDER},${(1 - d / 110) * 0.08})`;
+              ctx.lineWidth = 0.8;
+              ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke();
+            }
+          }
+        }
+        raf = requestAnimationFrame(animate);
+      }
+      animate();
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) cancelAnimationFrame(raf); else animate();
+      });
+    })();
+
+    // ── GSAP animations ───────────────────────────────────────────────────────
+    window.addEventListener('load', function () {
+      if (typeof gsap === 'undefined') return;
+      if (typeof ScrollTrigger !== 'undefined') gsap.registerPlugin(ScrollTrigger);
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const dur = reduced ? 0 : 0.5;
+
+      // Hero
+      gsap.set(['#hero-badge', '#hero-h1', '#hero-sub', '#hero-cta'], { opacity: 0, y: 20 });
+      gsap.timeline()
+        .to('#hero-badge', { opacity: 1, y: 0, duration: dur, ease: 'back.out(1.4)', delay: 0.1 })
+        .to('#hero-h1',   { opacity: 1, y: 0, duration: dur, ease: 'back.out(1.4)' }, '-=0.2')
+        .to('#hero-sub',  { opacity: 1, y: 0, duration: dur, ease: 'power2.out' }, '-=0.2')
+        .to('#hero-cta',  { opacity: 1, y: 0, duration: dur, ease: 'power2.out' }, '-=0.15');
+
+      if (typeof ScrollTrigger !== 'undefined' && !reduced) {
+        // Cards stagger
+        gsap.from('#cards-grid .card', {
+          scrollTrigger: { trigger: '#cards-grid', start: 'top 80%' },
+          opacity: 0, scale: 0.92, y: 20, duration: 0.45,
+          stagger: { each: 0.08, from: 'start', grid: 'auto' },
+          ease: 'back.out(1.4)'
+        });
+        // Features
+        gsap.from('#features-grid .feature', {
+          scrollTrigger: { trigger: '#features-grid', start: 'top 80%' },
+          opacity: 0, x: -16, duration: 0.4, stagger: 0.07, ease: 'power2.out'
+        });
+        // CTA band
+        gsap.from('#cta-band', {
+          scrollTrigger: { trigger: '#cta-band', start: 'top 85%' },
+          opacity: 0, y: 30, duration: 0.5, ease: 'power2.out'
+        });
+        // Stat counters
+        document.querySelectorAll('.stat-value[data-target]').forEach(el => {
+          const target = +el.dataset.target;
+          ScrollTrigger.create({
+            trigger: el, start: 'top 85%', once: true,
+            onEnter: () => gsap.to({ val: 0 }, {
+              val: target, duration: 1.2, ease: 'power2.out',
+              onUpdate: function () { el.textContent = Math.round(this.targets()[0].val); }
+            })
+          });
+        });
+      }
+    });
+  </script>
+</body>
 </html>

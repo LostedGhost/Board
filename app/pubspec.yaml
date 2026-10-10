@@ -58,6 +58,7 @@ dependencies:
   markdown_widget: ^2.3.2+8
   win32: ^6.4.0
   ffi: ^2.2.0
+  google_fonts: ^6.2.1
 
 dependency_overrides:
   # Correctif local du hook de compilation Windows (MSBuild 16 / VS 2019) — voir third_party/sodium.
@@ -85,6 +86,8 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # google_fonts met Rubik en cache ; pas de fichiers .ttf à embarquer manuellement.
 
   assets:
     - assets/icone_tray.ico
