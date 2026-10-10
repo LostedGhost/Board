@@ -1,0 +1,136 @@
+import 'aead.dart';
+import 'auth.dart';
+import 'box.dart';
+import 'generic_hash.dart';
+import 'ipcrypt.dart';
+import 'kdf.dart';
+import 'kdf_hkdf.dart';
+import 'kem.dart';
+import 'kx.dart';
+import 'secret_box.dart';
+import 'secret_stream.dart';
+import 'short_hash.dart';
+import 'sign.dart';
+import 'xof.dart';
+
+/// A meta class that provides access to all libsodium crypto APIs.
+abstract interface class const Crypto._() {
+  /// An instance of [SecretBox].
+  ///
+  /// This provides all APIs that start with `crypto_secretbox`.
+  SecretBox get secretBox;
+
+  /// An instance of [SecretStream].
+  ///
+  /// This provides all APIs that start with `crypto_secretstream`.
+  SecretStream get secretStream;
+
+  /// An instance of [Aead].
+  ///
+  /// This provides all APIs that start with `crypto_aead_chacha20poly1305`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/secret-key_cryptography/aead/chacha20-poly1305/original_chacha20-poly1305_construction
+  Aead get aeadChaCha20Poly1305;
+
+  /// An instance of [Aead].
+  ///
+  /// This provides all APIs that start with
+  /// `crypto_aead_xchacha20poly1305_ietf`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/secret-key_cryptography/aead/chacha20-poly1305/xchacha20-poly1305_construction
+  Aead get aeadXChaCha20Poly1305IETF;
+
+  /// An instance of [Aead].
+  ///
+  /// This provides all APIs that start with `crypto_aead_aegis256`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/secret-key_cryptography/aead/aegis-256
+  Aead get aeadAegis256;
+
+  /// An instance of [Auth].
+  ///
+  /// This provides all APIs that start with `crypto_auth`.
+  Auth get auth;
+
+  /// An instance of [Box].
+  ///
+  /// This provides all APIs that start with `crypto_box`.
+  Box get box;
+
+  /// An instance of [Sign].
+  ///
+  /// This provides all APIs that start with `crypto_sign`.
+  Sign get sign;
+
+  /// An instance of [GenericHash].
+  ///
+  /// This provides all APIs that start with `crypto_generichash`.
+  GenericHash get genericHash;
+
+  /// An instance of [Ipcrypt].
+  ///
+  /// This provides all APIs that start with `crypto_ipcrypt`.
+  Ipcrypt get ipcrypt;
+
+  /// An instance of [ShortHash].
+  ///
+  /// This provides all APIs that start with `crypto_shorthash`.
+  ShortHash get shortHash;
+
+  /// An instance of [Kdf].
+  ///
+  /// This provides all APIs that start with `crypto_kdf`.
+  Kdf get kdf;
+
+  /// An instance of [KdfHkdf].
+  ///
+  /// This provides all APIs that start with `crypto_kdf_hkdf_sha256`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/key_derivation/hkdf
+  KdfHkdf get kdfHkdfSha256;
+
+  /// An instance of [KdfHkdf].
+  ///
+  /// This provides all APIs that start with `crypto_kdf_hkdf_sha512`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/key_derivation/hkdf
+  KdfHkdf get kdfHkdfSha512;
+
+  /// An instance of [Kem].
+  ///
+  /// This provides all APIs that start with `crypto_kem`.
+  Kem get kem;
+
+  /// An instance of [Kx].
+  ///
+  /// This provides all APIs that start with `crypto_kx`.
+  Kx get kx;
+
+  /// An instance of [Xof].
+  ///
+  /// This provides all APIs that start with `crypto_xof_shake128`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/hashing/xof
+  Xof get xofShake128;
+
+  /// An instance of [Xof].
+  ///
+  /// This provides all APIs that start with `crypto_xof_shake256`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/hashing/xof
+  Xof get xofShake256;
+
+  /// An instance of [Xof].
+  ///
+  /// This provides all APIs that start with `crypto_xof_turboshake128`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/hashing/xof
+  Xof get xofTurboshake128;
+
+  /// An instance of [Xof].
+  ///
+  /// This provides all APIs that start with `crypto_xof_turboshake256`.
+  ///
+  /// See https://libsodium.gitbook.io/doc/hashing/xof
+  Xof get xofTurboshake256;
+}

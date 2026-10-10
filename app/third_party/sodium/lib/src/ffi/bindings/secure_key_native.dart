@@ -1,0 +1,75 @@
+import 'dart:ffi';
+import 'dart:typed_data';
+
+import 'package:meta/meta.dart';
+
+import '../../api/secure_key.dart';
+import 'libsodium.ffi.wrapper.dart';
+import 'memory_protection.dart';
+import 'sodium_pointer.dart';
+import 'sodium_scope.dart';
+
+@internal
+typedef SecureFFICallbackFn<T> = T Function(SodiumPointer<UnsignedChar> keyPtr);
+
+@internal
+typedef SecureFFINullableCallbackFn<T> = T Function(
+  SodiumPointer<UnsignedChar>? keyPtr,
+);
+
+@internal
+abstract class const SecureKeyNative._() implements SecureKey {
+  T runUnlockedNative<T>(
+    SecureFFICallbackFn<T> callback, {
+    bool writable = false,
+  });
+}
+
+@internal
+extension SecureKeySafeCastX on SecureKey {
+  T runUnlockedNative<T>(
+    LibSodiumFFI sodium,
+    SecureFFICallbackFn<T> callback, {
+    bool writable = false,
+  }) {
+    if (this is SecureKeyNative) {
+      return (this as SecureKeyNative).runUnlockedNative(
+        callback,
+        writable: writable,
+      );
+    } else {
+      return _runUnlockedRawWrapped(sodium, callback, writable: writable);
+    }
+  }
+
+  T _runUnlockedRawWrapped<T>(
+    LibSodiumFFI sodium,
+    SecureFFICallbackFn<T> callback, {
+    bool writable = false,
+  }) => runUnlockedSync(
+    (data) => sodiumScope(sodium, (scope) {
+      final ptr = scope.copyList<UnsignedChar>(
+        data,
+        memoryProtection: writable
+            ? MemoryProtection.readWrite
+            : MemoryProtection.readOnly,
+      );
+
+      final result = callback(ptr);
+      if (writable) {
+        data.setRange(0, data.length, ptr.asListView<Uint8List>());
+      }
+      return result;
+    }),
+    writable: writable,
+  );
+}
+
+@internal
+extension SecureKeyNullableSafeCastX on SecureKey? {
+  T runMaybeUnlockedNative<T>(
+    LibSodiumFFI sodium,
+    SecureFFINullableCallbackFn<T> callback,
+  ) =>
+      this != null ? this!.runUnlockedNative(sodium, callback) : callback(null);
+}

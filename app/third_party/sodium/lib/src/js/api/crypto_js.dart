@@ -1,0 +1,104 @@
+import 'package:meta/meta.dart';
+
+import '../../api/aead.dart';
+import '../../api/auth.dart';
+import '../../api/box.dart';
+import '../../api/crypto.dart';
+import '../../api/generic_hash.dart';
+import '../../api/ipcrypt.dart';
+import '../../api/kdf.dart';
+import '../../api/kdf_hkdf.dart';
+import '../../api/kem.dart';
+import '../../api/kx.dart';
+import '../../api/secret_box.dart';
+import '../../api/secret_stream.dart';
+import '../../api/short_hash.dart';
+import '../../api/sign.dart';
+import '../../api/xof.dart';
+import '../bindings/sodium.js.dart' hide KemEncResult, KeyPair, SecretBox;
+import 'aead_aegis256_js.dart';
+import 'aead_chacha20poly1305_js.dart';
+import 'aead_xchacha20poly1305ietf_js.dart';
+import 'auth_js.dart';
+import 'box_js.dart';
+import 'generic_hash_js.dart';
+import 'ipcrypt_js.dart';
+import 'kdf_hkdf_sha256_js.dart';
+import 'kdf_hkdf_sha512_js.dart';
+import 'kdf_js.dart';
+import 'kem_js.dart';
+import 'kx_js.dart';
+import 'secret_box_js.dart';
+import 'secret_stream_js.dart';
+import 'short_hash_js.dart';
+import 'sign_js.dart';
+import 'xof_shake128_js.dart';
+import 'xof_shake256_js.dart';
+import 'xof_turboshake128_js.dart';
+import 'xof_turboshake256_js.dart';
+
+@internal
+// ignore: public_member_api_docs false positive
+class CryptoJS(final LibSodiumJS sodium) implements Crypto {
+  @override
+  late final SecretBox secretBox = SecretBoxJS(sodium);
+
+  @override
+  late final SecretStream secretStream = SecretStreamJS(sodium);
+
+  @override
+  late final Aead aeadChaCha20Poly1305 = AeadChaCha20Poly1305JS(sodium);
+
+  @override
+  late final Aead aeadXChaCha20Poly1305IETF = AeadXChaCha20Poly1305IEFTJS(
+    sodium,
+  );
+
+  @override
+  late final Aead aeadAegis256 = AeadAegis256JS(sodium);
+
+  @override
+  late final Auth auth = AuthJS(sodium);
+
+  @override
+  late final Box box = BoxJS(sodium);
+
+  @override
+  late final Sign sign = SignJS(sodium);
+
+  @override
+  late final GenericHash genericHash = GenericHashJS(sodium);
+
+  @override
+  late final Ipcrypt ipcrypt = IpcryptJS(sodium);
+
+  @override
+  late final ShortHash shortHash = ShortHashJS(sodium);
+
+  @override
+  late final Kdf kdf = KdfJS(sodium);
+
+  @override
+  late final KdfHkdf kdfHkdfSha256 = KdfHkdfSha256JS(sodium);
+
+  @override
+  late final KdfHkdf kdfHkdfSha512 = KdfHkdfSha512JS(sodium);
+
+  @override
+  late final Kem kem = KemJS(sodium);
+
+  @override
+  late final Kx kx = KxJS(sodium);
+
+  @override
+  late final Xof xofShake128 = XofShake128JS(sodium);
+
+  @override
+  late final Xof xofShake256 = XofShake256JS(sodium);
+
+  @override
+  late final Xof xofTurboshake128 = XofTurboshake128JS(sodium);
+
+  @override
+  late final Xof xofTurboshake256 = XofTurboshake256JS(sodium);
+}

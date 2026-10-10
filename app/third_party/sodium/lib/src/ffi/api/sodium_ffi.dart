@@ -1,0 +1,382 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:ffi';
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:typed_data';
+
+import 'package:ffi/ffi.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+import '../../api/crypto.dart';
+import '../../api/helpers/platform_types/internet_address_fallback.dart'
+    if (dart.library.io) '../../api/helpers/platform_types/internet_address_io.dart'
+    as ia;
+import '../../api/ip_address.dart';
+import '../../api/key_pair.dart';
+import '../../api/randombytes.dart';
+import '../../api/secure_key.dart';
+import '../../api/sodium.dart';
+import '../../api/sodium_exception.dart';
+import '../../api/sodium_version.dart';
+import '../../api/transferrable_secure_key.dart';
+import '../bindings/libsodium.ffi.wrapper.dart';
+import '../bindings/memory_protection.dart';
+import '../bindings/sodium_finalizer.dart';
+import '../bindings/sodium_pointer.dart';
+import '../bindings/sodium_scope.dart';
+import 'crypto_ffi.dart';
+import 'helpers/isolates/isolate_result.dart';
+import 'helpers/isolates/transferrable_key_pair_ffi.dart';
+import 'helpers/isolates/transferrable_secure_key_ffi.dart';
+import 'ip_address_ffi.dart';
+import 'randombytes_ffi.dart';
+import 'secure_key_ffi.dart';
+
+@internal
+typedef SodiumFFIIsolateCallback<TResult, TSodium extends SodiumFFI> =
+    FutureOr<TResult> Function(
+      TSodium sodium,
+      List<SecureKey> secureKeys,
+      List<KeyPair> keyPairs,
+    );
+
+@internal
+typedef SodiumFFIFactory<TSodiumFFI extends SodiumFFI> = TSodiumFFI Function(
+  LibSodiumFFI sodium,
+);
+
+@internal
+// ignore: public_member_api_docs false positive
+class SodiumFFI([final LibSodiumFFI sodium = const LibSodiumFFI()])
+    with SodiumValidations
+    implements Sodium {
+  @override
+  SodiumVersion get version => SodiumVersion(
+    sodium.sodium_library_version_major(),
+    sodium.sodium_library_version_minor(),
+    sodium.sodium_version_string().cast<Utf8>().toDartString(),
+  );
+
+  @override
+  Uint8List pad(Uint8List buf, int blocksize) {
+    final maxLen = buf.length + blocksize;
+    return sodiumScope(sodium, (scope) {
+      final extendedBuffer = scope.alloc<UnsignedChar>(maxLen)..fill(buf);
+      final paddedLength = scope.alloc<Size>(1, zeroMemory: true);
+      final result = sodium.sodium_pad(
+        paddedLength.ptr,
+        extendedBuffer.ptr,
+        buf.length,
+        blocksize,
+        maxLen,
+      );
+      SodiumException.checkSucceededInt(result);
+
+      final length = paddedLength.ptr.value;
+      return Uint8List.sublistView(
+        scope.takeBytes<Uint8List>(extendedBuffer),
+        0,
+        length,
+      );
+    });
+  }
+
+  @override
+  Uint8List unpad(Uint8List buf, int blocksize) => sodiumScope(sodium, (scope) {
+    final extendedBuffer = scope.copyList<UnsignedChar>(buf);
+    final unpaddedLength = scope.alloc<Size>(1, zeroMemory: true);
+    final result = sodium.sodium_unpad(
+      unpaddedLength.ptr,
+      extendedBuffer.ptr,
+      extendedBuffer.count,
+      blocksize,
+    );
+    SodiumException.checkSucceededInt(result);
+
+    final length = unpaddedLength.ptr.value;
+    return Uint8List.sublistView(
+      scope.takeBytes<Uint8List>(extendedBuffer),
+      0,
+      length,
+    );
+  });
+
+  @override
+  bool memcmp(Uint8List b1, Uint8List b2) {
+    validateSameLength(b1, b2, 'b2');
+    return sodiumScope(sodium, (scope) {
+      final b1Ptr = scope.copyList<UnsignedChar>(b1);
+      final b2Ptr = scope.copyList<UnsignedChar>(b2);
+      final result = sodium.sodium_memcmp(
+        b1Ptr.ptr.cast(),
+        b2Ptr.ptr.cast(),
+        b1Ptr.count,
+      );
+      return result == 0;
+    });
+  }
+
+  @override
+  int compare(Uint8List b1, Uint8List b2) {
+    validateSameLength(b1, b2, 'b2');
+    return sodiumScope(sodium, (scope) {
+      final b1Ptr = scope.copyList<UnsignedChar>(b1);
+      final b2Ptr = scope.copyList<UnsignedChar>(b2);
+      return sodium.sodium_compare(b1Ptr.ptr, b2Ptr.ptr, b1Ptr.count);
+    });
+  }
+
+  @override
+  bool isZero(Uint8List n) => sodiumScope(sodium, (scope) {
+    final nPtr = scope.copyList<UnsignedChar>(n);
+    final result = sodium.sodium_is_zero(nPtr.ptr, nPtr.count);
+    return result == 1;
+  });
+
+  @override
+  Uint8List increment(Uint8List n) => sodiumScope(sodium, (scope) {
+    final nPtr = scope.copyList<UnsignedChar>(n, memoryProtection: .readWrite);
+    sodium.sodium_increment(nPtr.ptr, nPtr.count);
+    return scope.takeBytes<Uint8List>(nPtr);
+  });
+
+  @override
+  Uint8List add(Uint8List a, Uint8List b) {
+    validateSameLength(a, b, 'b');
+    return sodiumScope(sodium, (scope) {
+      final aPtr = scope.copyList<UnsignedChar>(
+        a,
+        memoryProtection: .readWrite,
+      );
+      final bPtr = scope.copyList<UnsignedChar>(b);
+      sodium.sodium_add(aPtr.ptr, bPtr.ptr, aPtr.count);
+      return scope.takeBytes<Uint8List>(aPtr);
+    });
+  }
+
+  @override
+  Uint8List sub(Uint8List a, Uint8List b) {
+    validateSameLength(a, b, 'b');
+    return sodiumScope(sodium, (scope) {
+      final aPtr = scope.copyList<UnsignedChar>(
+        a,
+        memoryProtection: .readWrite,
+      );
+      final bPtr = scope.copyList<UnsignedChar>(b);
+      sodium.sodium_sub(aPtr.ptr, bPtr.ptr, aPtr.count);
+      return scope.takeBytes<Uint8List>(aPtr);
+    });
+  }
+
+  @override
+  String bin2hex(Uint8List bin) => sodiumScope(sodium, (scope) {
+    final binPtr = scope.copyList<UnsignedChar>(bin);
+    final hexPtr = scope.alloc<Char>(bin.length * 2 + 1, zeroMemory: true);
+    sodium.sodium_bin2hex(hexPtr.ptr, hexPtr.count, binPtr.ptr, binPtr.count);
+    return scope.takeString(hexPtr, encoding: ascii);
+  });
+
+  @override
+  Uint8List hex2bin(String hex) {
+    validateHex(hex);
+    return sodiumScope(sodium, (scope) {
+      final hexPtr = scope.copyString(hex, encoding: ascii);
+      final binPtr = scope.alloc<UnsignedChar>(hexPtr.count ~/ 2);
+      final binLength = scope.alloc<Size>(1, zeroMemory: true);
+
+      final result = sodium.sodium_hex2bin(
+        binPtr.ptr,
+        binPtr.count,
+        hexPtr.ptr,
+        hexPtr.count,
+        nullptr,
+        binLength.ptr,
+        nullptr,
+      );
+      SodiumException.checkSucceededInt(result);
+
+      final length = binLength.ptr.value;
+      return Uint8List.sublistView(
+        scope.takeBytes<Uint8List>(binPtr),
+        0,
+        length,
+      );
+    });
+  }
+
+  @override
+  SecureKey secureAlloc(int length) => SecureKeyFFI.alloc(sodium, length);
+
+  @override
+  SecureKey secureRandom(int length) => SecureKeyFFI.random(sodium, length);
+
+  @override
+  SecureKey secureCopy(Uint8List data) => SecureKeyFFI(
+    data.toSodiumPointer(sodium, memoryProtection: MemoryProtection.noAccess),
+  );
+
+  @override
+  late final Randombytes randombytes = RandombytesFFI(sodium);
+
+  @override
+  late final Crypto crypto = CryptoFFI(sodium);
+
+  @override
+  IpAddress ipFromAddress(ia.InternetAddress address) =>
+      IpAddressFFI(sodium, address as InternetAddress);
+
+  @override
+  IpAddress ipFromString(String address) => IpAddressFFI.parse(sodium, address);
+
+  @override
+  IpAddress ipFromBytes(Uint8List bytes) =>
+      IpAddressFFI.fromRawBytes(sodium, bytes);
+
+  @override
+  Future<T> runIsolated<T>(
+    SodiumIsolateCallback<T> callback, {
+    List<SecureKey> secureKeys = const [],
+    List<KeyPair> keyPairs = const [],
+  }) async => await runIsolatedWithFactory<T, SodiumFFI>(
+    this,
+    callback,
+    secureKeys,
+    keyPairs,
+  );
+
+  @override
+  TransferrableSecureKey createTransferrableSecureKey(SecureKey secureKey) =>
+      TransferrableSecureKeyFFI(secureKey);
+
+  @override
+  SecureKey materializeTransferrableSecureKey(
+    TransferrableSecureKey transferrableSecureKey,
+  ) {
+    if (transferrableSecureKey case TransferrableSecureKeyFFI()) {
+      return transferrableSecureKey.toSecureKey(this);
+    } else {
+      throw SodiumException(
+        'Cannot materialize instance of type: '
+        '${transferrableSecureKey.runtimeType}',
+      );
+    }
+  }
+
+  @override
+  TransferrableKeyPair createTransferrableKeyPair(KeyPair keyPair) =>
+      TransferrableKeyPairFFI(keyPair);
+
+  @override
+  KeyPair materializeTransferrableKeyPair(
+    TransferrableKeyPair transferrableKeyPair,
+  ) {
+    if (transferrableKeyPair case TransferrableKeyPairFFI()) {
+      return transferrableKeyPair.toKeyPair(this);
+    } else {
+      throw SodiumException(
+        'Cannot materialize instance of type: '
+        '${transferrableKeyPair.runtimeType}',
+      );
+    }
+  }
+
+  @protected
+  Future<TResult> runIsolatedWithFactory<TResult, TSodiumFFI extends SodiumFFI>(
+    TSodiumFFI sodium,
+    SodiumIsolateCallback<TResult> callback,
+    List<SecureKey> secureKeys,
+    List<KeyPair> keyPairs,
+  ) async {
+    final isolateResult = await _isolateRun<TResult, TSodiumFFI>(
+      sodium,
+      secureKeys.map(TransferrableSecureKeyFFI.new).toList(),
+      keyPairs.map(TransferrableKeyPairFFI.new).toList(),
+      callback,
+    );
+    return isolateResult.extract(this);
+  }
+
+  static Future<IsolateResult<TResult>>
+  _isolateRun<TResult, TSodium extends SodiumFFI>(
+    TSodium sodium,
+    List<TransferrableSecureKeyFFI> transferableSecureKeys,
+    List<TransferrableKeyPairFFI> transferableKeyPairs,
+    SodiumIsolateCallback<TResult> callback,
+  ) async {
+    SodiumFinalizer? debugOverwriteFinalizer;
+    // ignore: prefer_asserts_with_message for debug only code
+    assert(() {
+      // ignore: invalid_use_of_visible_for_testing_member for debug only code
+      final maybeOverwrittenFinalizer = SodiumPointer.debugOverwriteFinalizer;
+      if (maybeOverwrittenFinalizer.runtimeType != SodiumFinalizer) {
+        debugOverwriteFinalizer = maybeOverwrittenFinalizer;
+      }
+      return true;
+    }());
+
+    return await Isolate.run(debugName: 'SodiumFFI.runIsolated', () async {
+      // ignore: prefer_asserts_with_message for debug only code
+      assert(() {
+        if (debugOverwriteFinalizer != null) {
+          // ignore: invalid_use_of_visible_for_testing_member for debug only code
+          SodiumPointer.debugOverwriteFinalizer = debugOverwriteFinalizer!;
+          // ignore: avoid_print for debug only code
+          print(
+            '################################################################\n'
+            '###                      !!! WARNING !!!                     ###\n'
+            '###                                                          ###\n'
+            '### Found SodiumPointer.debugOverwriteFinalizer that is used ###\n'
+            '### to mock finalization of objects. If you see this message ###\n'
+            '### in a non-test environment, it means that some code is    ###\n'
+            '### mocking the finalization of SodiumPointer objects which  ###\n'
+            '### can finalization of SodiumPointer objects which can lead ###\n'
+            '### to memory leaks! Make sure that you are not mocking      ###\n'
+            '### SodiumPointer.finalizer in production.                   ###\n'
+            '################################################################',
+          );
+        }
+        return true;
+      }());
+
+      final restoredSecureKeys = transferableSecureKeys
+          .map((transferKey) => transferKey.toSecureKey(sodium))
+          .toList();
+      final restoredKeyPairs = transferableKeyPairs
+          .map((transferKeyPair) => transferKeyPair.toKeyPair(sodium))
+          .toList();
+
+      try {
+        final result = await callback(restoredSecureKeys, restoredKeyPairs);
+
+        IsolateResult<TResult> isolateResult;
+        switch (result) {
+          case SecureKey():
+            isolateResult = IsolateResult<TResult>.key(
+              TransferrableSecureKeyFFI(result),
+            );
+            result.dispose();
+          case KeyPair():
+            isolateResult = IsolateResult<TResult>.keyPair(
+              TransferrableKeyPairFFI(result),
+            );
+            result.dispose();
+          case Uint8List():
+            isolateResult = IsolateResult<TResult>.bytes(
+              TransferableTypedData.fromList([result]),
+            );
+          default:
+            isolateResult = IsolateResult<TResult>(result);
+        }
+        return isolateResult;
+      } finally {
+        for (final key in restoredSecureKeys) {
+          key.dispose();
+        }
+        for (final keyPair in restoredKeyPairs) {
+          keyPair.dispose();
+        }
+      }
+    });
+  }
+}

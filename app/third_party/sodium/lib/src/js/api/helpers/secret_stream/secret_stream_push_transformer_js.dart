@@ -1,0 +1,72 @@
+import 'dart:js_interop';
+
+import 'package:meta/meta.dart';
+
+import '../../../../api/helpers/secret_stream/push/init_push_result.dart';
+import '../../../../api/helpers/secret_stream/push/secret_stream_push_transformer.dart';
+import '../../../../api/secret_stream.dart';
+import '../../../../api/secure_key.dart';
+import '../../../bindings/js_error.dart';
+import '../../../bindings/sodium.js.dart';
+import 'secret_stream_message_tag_jsx.dart';
+
+@internal
+// ignore: public_member_api_docs false positive
+class SecretStreamPushTransformerSinkJS(final LibSodiumJS sodium)
+    extends
+        SecretStreamPushTransformerSink<SecretstreamXchacha20poly1305State> {
+  @override
+  InitPushResult<SecretstreamXchacha20poly1305State> initialize(SecureKey key) {
+    final initResult = jsErrorWrap(
+      () => key.runUnlockedSync(
+        (keyData) => sodium.crypto_secretstream_xchacha20poly1305_init_push(
+          keyData.toJS,
+        ),
+      ),
+    );
+
+    return InitPushResult(
+      header: initResult.header.toDart,
+      state: initResult.state,
+    );
+  }
+
+  @override
+  void rekey(SecretstreamXchacha20poly1305State cryptoState) => jsErrorWrap(
+    // always returns true, ignore result
+    () => sodium.crypto_secretstream_xchacha20poly1305_rekey(cryptoState),
+  );
+
+  @override
+  SecretStreamCipherMessage encryptMessage(
+    SecretstreamXchacha20poly1305State cryptoState,
+    SecretStreamPlainMessage event,
+  ) {
+    final cipherText = jsErrorWrap(
+      () => sodium.crypto_secretstream_xchacha20poly1305_push(
+        cryptoState,
+        event.message.toJS,
+        event.additionalData?.toJS,
+        event.tag.getValue(sodium),
+      ),
+    );
+
+    return SecretStreamCipherMessage(
+      cipherText.toDart,
+      additionalData: event.additionalData,
+    );
+  }
+
+  @override
+  void disposeState(SecretstreamXchacha20poly1305State cryptoState) =>
+      jsErrorWrap(() => sodium.free(cryptoState));
+}
+
+@internal
+// ignore: public_member_api_docs false positive
+class const SecretStreamPushTransformerJS(final LibSodiumJS sodium, super.key)
+    extends SecretStreamPushTransformer<SecretstreamXchacha20poly1305State> {
+  @override
+  SecretStreamPushTransformerSink<SecretstreamXchacha20poly1305State>
+  createSink() => SecretStreamPushTransformerSinkJS(sodium);
+}

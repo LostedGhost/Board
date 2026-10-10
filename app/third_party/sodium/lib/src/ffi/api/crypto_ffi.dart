@@ -1,0 +1,104 @@
+import 'package:meta/meta.dart';
+
+import '../../api/aead.dart';
+import '../../api/auth.dart';
+import '../../api/box.dart';
+import '../../api/crypto.dart';
+import '../../api/generic_hash.dart';
+import '../../api/ipcrypt.dart';
+import '../../api/kdf.dart';
+import '../../api/kdf_hkdf.dart';
+import '../../api/kem.dart';
+import '../../api/kx.dart';
+import '../../api/secret_box.dart';
+import '../../api/secret_stream.dart';
+import '../../api/short_hash.dart';
+import '../../api/sign.dart';
+import '../../api/xof.dart';
+import '../bindings/libsodium.ffi.wrapper.dart';
+import 'aead_aegis256_ffi.dart';
+import 'aead_chacha20poly1305_ffi.dart';
+import 'aead_xchacha20poly1305ietf_ffi.dart';
+import 'auth_ffi.dart';
+import 'box_ffi.dart';
+import 'generic_hash_ffi.dart';
+import 'ipcrypt_ffi.dart';
+import 'kdf_ffi.dart';
+import 'kdf_hkdf_sha256_ffi.dart';
+import 'kdf_hkdf_sha512_ffi.dart';
+import 'kem_ffi.dart';
+import 'kx_ffi.dart';
+import 'secret_box_ffi.dart';
+import 'secret_stream_ffi.dart';
+import 'short_hash_ffi.dart';
+import 'sign_ffi.dart';
+import 'xof_shake128_ffi.dart';
+import 'xof_shake256_ffi.dart';
+import 'xof_turboshake128_ffi.dart';
+import 'xof_turboshake256_ffi.dart';
+
+@internal
+// ignore: public_member_api_docs false positive
+class CryptoFFI(final LibSodiumFFI sodium) implements Crypto {
+  @override
+  late final SecretBox secretBox = SecretBoxFFI(sodium);
+
+  @override
+  late final SecretStream secretStream = SecretStreamFFI(sodium);
+
+  @override
+  late final Aead aeadChaCha20Poly1305 = AeadChacha20Poly1305FFI(sodium);
+
+  @override
+  late final Aead aeadXChaCha20Poly1305IETF = AeadXChaCha20Poly1305IETFFFI(
+    sodium,
+  );
+
+  @override
+  late final Aead aeadAegis256 = AeadAegis256FFI(sodium);
+
+  @override
+  late final Auth auth = AuthFFI(sodium);
+
+  @override
+  late final Box box = BoxFFI(sodium);
+
+  @override
+  late final Sign sign = SignFFI(sodium);
+
+  @override
+  late final GenericHash genericHash = GenericHashFFI(sodium);
+
+  @override
+  late final Ipcrypt ipcrypt = IpcryptFFI(sodium);
+
+  @override
+  late final ShortHash shortHash = ShortHashFFI(sodium);
+
+  @override
+  late final Kdf kdf = KdfFFI(sodium);
+
+  @override
+  late final KdfHkdf kdfHkdfSha256 = KdfHkdfSha256FFI(sodium);
+
+  @override
+  late final KdfHkdf kdfHkdfSha512 = KdfHkdfSha512FFI(sodium);
+
+  @override
+  late final Kem kem = KemFFI(sodium);
+
+  @override
+  late final Kx kx = KxFFI(sodium);
+
+  @override
+  late final Xof xofShake128 = XofShake128FFI(sodium);
+
+  @override
+  late final Xof xofShake256 = XofShake256FFI(sodium);
+
+  @override
+  late final Xof xofTurboshake128 = XofTurboshake128FFI(sodium);
+
+  @override
+  late final Xof xofTurboshake256 = XofTurboshake256FFI(sodium);
+}

@@ -1,0 +1,268 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../fonctionnalites/compte/ecrans_auth.dart';
+import '../fonctionnalites/envois/ecran_envois.dart';
+import '../fonctionnalites/fichiers/ecran_fichiers.dart';
+import '../fonctionnalites/post_it/ecran_post_it.dart';
+import '../fonctionnalites/presse_papier/ecran_presse_papier.dart';
+import '../fonctionnalites/rappels/planificateur_rappels.dart';
+import '../fonctionnalites/recherche/recherche.dart';
+import '../fonctionnalites/reglages/ecran_reglages.dart';
+import '../fonctionnalites/snippets/ecran_snippets.dart';
+import '../fonctionnalites/taches/ecran_taches.dart';
+import '../noyau/noyau.dart';
+import '../noyau/session/service_compte.dart';
+import '../noyau/synchro/moteur_synchro.dart';
+import 'capture_rapide.dart';
+import 'commun.dart';
+
+class Section {
+  const Section(this.titre, this.icone, this.iconeActive, this.construire, {this.compteRequis = false});
+
+  final String titre;
+  final IconData icone;
+  final IconData iconeActive;
+  final Widget Function() construire;
+  final bool compteRequis;
+}
+
+final sections = <Section>[
+  Section('Presse-papier', Icons.content_paste_outlined, Icons.content_paste, () => const EcranPressePapier()),
+  Section('Post-it', Icons.sticky_note_2_outlined, Icons.sticky_note_2, () => const EcranPostIt()),
+  Section('Tâches', Icons.checklist_outlined, Icons.checklist, () => const EcranTaches()),
+  Section('Snippets', Icons.code_outlined, Icons.code, () => const EcranSnippets()),
+  Section('Fichiers', Icons.folder_outlined, Icons.folder, () => const EcranFichiers(), compteRequis: true),
+  Section('Envois', Icons.send_to_mobile_outlined, Icons.send_to_mobile, () => const EcranEnvois(), compteRequis: true),
+  Section('Réglages', Icons.settings_outlined, Icons.settings, () => const EcranReglages()),
+];
+
+/// Navigation principale : raccourcis clavier, recherche globale (G2) et état de synchro (I5).
+class Coquille extends StatefulWidget {
+  const Coquille({super.key});
+
+  /// Permet aux autres écrans (raccourci global, notifications) de changer de section.
+  static final sectionDemandee = ValueNotifier<int?>(null);
+
+  @override
+  State<Coquille> createState() => _CoquilleState();
+}
+
+class _CoquilleState extends State<Coquille> {
+  int _index = 0;
+  StreamSubscription<Map<String, dynamic>>? _evenements;
+  PlanificateurRappels? _rappels;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final noyau = context.noyau;
+    _evenements ??= noyau.synchro.evenements.stream.listen(_surEvenement);
+    _rappels ??= PlanificateurRappels(noyau, context)..demarrer();
+    Coquille.sectionDemandee.addListener(_surSectionDemandee);
+    CaptureRapide.demandes.addListener(_surCapture);
+  }
+
+  void _surCapture() {
+    if (mounted) CaptureRapide.ouvrir(context);
+  }
+
+  void _surSectionDemandee() {
+    final i = Coquille.sectionDemandee.value;
+    if (i != null && mounted) setState(() => _index = i);
+    Coquille.sectionDemandee.value = null;
+  }
+
+  void _surEvenement(Map<String, dynamic> ev) {
+    if (!mounted) return;
+    switch (ev['type']) {
+      case 'envoi_recu':
+        afficherMessage(context, 'Nouvel élément reçu d\'un de vos appareils.',
+            action: SnackBarAction(label: 'Voir', onPressed: () => setState(() => _index = 5)));
+      case 'deverrouillage_demande':
+        afficherMessage(context, 'Un nouvel appareil demande l\'accès à votre compte.',
+            action: SnackBarAction(label: 'Examiner', onPressed: () => setState(() => _index = 6)));
+      case 'conflit':
+        afficherMessage(context, 'Une modification faite hors ligne a été remplacée par une plus récente. '
+            'L\'ancienne version reste dans l\'historique du post-it.');
+    }
+  }
+
+  @override
+  void dispose() {
+    _evenements?.cancel();
+    _rappels?.arreter();
+    Coquille.sectionDemandee.removeListener(_surSectionDemandee);
+    CaptureRapide.demandes.removeListener(_surCapture);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final noyau = context.noyau;
+    final large = MediaQuery.sizeOf(context).width >= 760;
+    final section = sections[_index];
+    final contenu = ListenableBuilder(
+      listenable: noyau.compte,
+      builder: (context, _) {
+        final etat = noyau.compte.etat;
+        if (section.compteRequis && etat.mode != ModeSession.actif) {
+          return EtatVide(
+            icone: section.iconeActive,
+            titre: '${section.titre} : réservé aux comptes',
+            texte: 'Créez un compte gratuit pour envoyer des fichiers et partager entre vos appareils. '
+                'Vos données locales seront conservées.',
+            action: FilledButton(onPressed: () => ouvrirInscription(context), child: const Text('Créer un compte')),
+          );
+        }
+        return section.construire();
+      },
+    );
+
+    final scaffold = Scaffold(
+      appBar: AppBar(
+        title: Text(section.titre),
+        actions: [
+          IconButton(
+            tooltip: 'Capture rapide (Ctrl+Alt+N)',
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: () => CaptureRapide.ouvrir(context),
+          ),
+          IconButton(
+            tooltip: 'Rechercher partout (Ctrl+K)',
+            icon: const Icon(Icons.search),
+            onPressed: () => ouvrirRecherche(context),
+          ),
+          const IndicateurSynchro(),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Column(
+        children: [
+          const BandeauVisiteur(),
+          const BandeauCleRecuperation(),
+          Expanded(child: contenu),
+        ],
+      ),
+      bottomNavigationBar: large
+          ? null
+          : NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+              destinations: [
+                for (final s in sections)
+                  NavigationDestination(icon: Icon(s.icone), selectedIcon: Icon(s.iconeActive), label: s.titre),
+              ],
+            ),
+    );
+
+    final avecRaccourcis = CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () => ouvrirRecherche(context),
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () => ouvrirRecherche(context),
+      },
+      child: Focus(autofocus: true, child: scaffold),
+    );
+
+    if (!large) return avecRaccourcis;
+    return Row(
+      children: [
+        NavigationRail(
+          selectedIndex: _index,
+          onDestinationSelected: (i) => setState(() => _index = i),
+          labelType: NavigationRailLabelType.all,
+          leading: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Icon(Icons.dashboard_customize, size: 32),
+          ),
+          destinations: [
+            for (final s in sections)
+              NavigationRailDestination(icon: Icon(s.icone), selectedIcon: Icon(s.iconeActive), label: Text(s.titre)),
+          ],
+        ),
+        const VerticalDivider(width: 1),
+        Expanded(child: avecRaccourcis),
+      ],
+    );
+  }
+}
+
+/// I5 : état de la synchronisation, toujours visible.
+class IndicateurSynchro extends StatelessWidget {
+  const IndicateurSynchro({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final noyau = context.noyau;
+    return ListenableBuilder(
+      listenable: Listenable.merge([noyau.synchro, noyau.compte]),
+      builder: (context, _) {
+        if (noyau.compte.etat.mode != ModeSession.actif) {
+          return const Tooltip(message: 'Mode local : rien ne quitte cet appareil', child: Icon(Icons.phonelink_lock));
+        }
+        final s = noyau.synchro;
+        final (icone, texte) = switch (s.etat) {
+          EtatSynchro.enCours => (Icons.sync, 'Synchronisation…'),
+          EtatSynchro.aJour => (Icons.cloud_done_outlined, 'Synchronisé'),
+          EtatSynchro.horsLigne => (Icons.cloud_off, 'Hors ligne : ${s.enAttente} modification(s) en attente'),
+          EtatSynchro.erreur => (Icons.sync_problem, 'Erreur de synchro : ${s.derniereErreur ?? ''}'),
+          EtatSynchro.inactif => (Icons.cloud_outlined, 'Synchro inactive'),
+        };
+        return IconButton(tooltip: '$texte\nCliquer pour synchroniser', icon: Icon(icone), onPressed: s.synchroniser);
+      },
+    );
+  }
+}
+
+/// I3 : invitation discrète à créer un compte, jamais bloquante.
+class BandeauVisiteur extends StatelessWidget {
+  const BandeauVisiteur({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final compte = context.noyau.compte;
+    return ListenableBuilder(
+      listenable: compte,
+      builder: (context, _) {
+        if (compte.etat.mode != ModeSession.visiteur) return const SizedBox.shrink();
+        return MaterialBanner(
+          leading: const Icon(Icons.info_outline),
+          content: const Text('Mode local : vos données restent sur cet appareil. '
+              'Créez un compte pour les retrouver partout, chiffrées de bout en bout.'),
+          actions: [
+            TextButton(onPressed: () => ouvrirConnexion(context), child: const Text('Se connecter')),
+            FilledButton.tonal(onPressed: () => ouvrirInscription(context), child: const Text('Créer un compte')),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// I4 : rappel non bloquant tant que la clé de récupération n'est pas confirmée (comptes Google).
+class BandeauCleRecuperation extends StatelessWidget {
+  const BandeauCleRecuperation({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final compte = context.noyau.compte;
+    return ListenableBuilder(
+      listenable: compte,
+      builder: (context, _) {
+        final e = compte.etat;
+        if (e.mode != ModeSession.actif || !e.cleRecuperationAConfirmer) return const SizedBox.shrink();
+        return MaterialBanner(
+          leading: const Icon(Icons.key),
+          content: const Text('Sauvegardez votre clé de récupération : sans elle, vos données sont perdues '
+              'si vous oubliez votre mot de passe et perdez vos appareils.'),
+          actions: [
+            TextButton(onPressed: () => ouvrirRegenerationCle(context), child: const Text('Obtenir ma clé')),
+          ],
+        );
+      },
+    );
+  }
+}

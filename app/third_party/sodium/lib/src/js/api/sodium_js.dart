@@ -1,0 +1,203 @@
+// ignore_for_file: unnecessary_lambdas to catch member access errors
+
+import 'dart:async';
+import 'dart:js_interop';
+import 'dart:typed_data';
+
+import 'package:meta/meta.dart';
+
+import '../../api/crypto.dart';
+import '../../api/ip_address.dart';
+import '../../api/key_pair.dart';
+import '../../api/randombytes.dart';
+import '../../api/secure_key.dart';
+import '../../api/sodium.dart';
+import '../../api/sodium_exception.dart';
+import '../../api/sodium_version.dart';
+import '../../api/transferrable_secure_key.dart';
+import '../bindings/js_error.dart';
+import '../bindings/sodium.js.dart' hide KeyPair;
+import 'crypto_js.dart';
+import 'ip_address_js.dart';
+import 'randombytes_js.dart';
+import 'secure_key_js.dart';
+import 'transferrable_secure_key_js.dart';
+
+@internal
+// ignore: public_member_api_docs false positive
+class SodiumJS(final LibSodiumJS sodium)
+    with SodiumValidations
+    implements Sodium {
+  @override
+  SodiumVersion get version => SodiumVersion(
+    sodium.SODIUM_LIBRARY_VERSION_MAJOR,
+    sodium.SODIUM_LIBRARY_VERSION_MINOR,
+    jsErrorWrap(() => sodium.sodium_version_string()),
+  );
+
+  @override
+  Uint8List pad(Uint8List buf, int blocksize) =>
+      jsErrorWrap(() => sodium.pad(buf.toJS, blocksize).toDart);
+
+  @override
+  Uint8List unpad(Uint8List buf, int blocksize) =>
+      jsErrorWrap(() => sodium.unpad(buf.toJS, blocksize).toDart);
+
+  @override
+  bool memcmp(Uint8List b1, Uint8List b2) {
+    validateSameLength(b1, b2, 'b2');
+    return jsErrorWrap(() => sodium.memcmp(b1.toJS, b2.toJS));
+  }
+
+  @override
+  int compare(Uint8List b1, Uint8List b2) {
+    validateSameLength(b1, b2, 'b2');
+    return jsErrorWrap(() => sodium.compare(b1.toJS, b2.toJS));
+  }
+
+  @override
+  bool isZero(Uint8List n) => jsErrorWrap(() => sodium.is_zero(n.toJS));
+
+  @override
+  Uint8List increment(Uint8List n) {
+    // libsodium.js increments in place - copy the data first, as the callers
+    // buffer must not be modified.
+    final result = Uint8List.fromList(n).toJS;
+    jsErrorWrap(() => sodium.increment(result));
+    return result.toDart;
+  }
+
+  @override
+  Uint8List add(Uint8List a, Uint8List b) {
+    validateSameLength(a, b, 'b');
+    // libsodium.js adds in place - copy the data first, as the callers buffer
+    // must not be modified.
+    final result = Uint8List.fromList(a).toJS;
+    jsErrorWrap(() => sodium.add(result, b.toJS));
+    return result.toDart;
+  }
+
+  @override
+  Uint8List sub(Uint8List a, Uint8List b) {
+    validateSameLength(a, b, 'b');
+    // libsodium.js has no equivalent of sodium_sub, so the little endian,
+    // branch free borrow loop of the C implementation is ported here. Neither
+    // the loop trip count nor the executed instructions depend on the data.
+    final result = Uint8List(a.length);
+    var carry = 0;
+    for (var i = 0; i < a.length; ++i) {
+      carry = a[i] - b[i] - carry;
+      result[i] = carry & 0xFF;
+      carry = (carry >> 8) & 1;
+    }
+    return result;
+  }
+
+  @override
+  String bin2hex(Uint8List bin) => jsErrorWrap(() => sodium.to_hex(bin.toJS));
+
+  @override
+  Uint8List hex2bin(String hex) {
+    validateHex(hex);
+    return jsErrorWrap(() => sodium.from_hex(hex).toDart);
+  }
+
+  @override
+  SecureKey secureAlloc(int length) => SecureKeyJS.alloc(sodium, length);
+
+  @override
+  SecureKey secureRandom(int length) => SecureKeyJS.random(sodium, length);
+
+  @override
+  SecureKey secureCopy(Uint8List data) => SecureKeyJS(
+    sodium,
+    Uint8List.fromList(data).toJS, // force copy the data
+  );
+
+  @override
+  late final Randombytes randombytes = RandombytesJS(sodium);
+
+  @override
+  late final Crypto crypto = CryptoJS(sodium);
+
+  @override
+  IpAddress ipFromAddress(dynamic address) =>
+      // On the web, the platform native address type is simply a string.
+      IpAddressJS.fromString(sodium, address as String);
+
+  @override
+  IpAddress ipFromString(String address) =>
+      IpAddressJS.fromString(sodium, address);
+
+  @override
+  IpAddress ipFromBytes(Uint8List bytes) =>
+      IpAddressJS.fromBytes(sodium, bytes);
+
+  @override
+  Future<T> runIsolated<T>(
+    SodiumIsolateCallback<T> callback, {
+    List<SecureKey> secureKeys = const [],
+    List<KeyPair> keyPairs = const [],
+  }) async => await runIsolatedWithInstance<T, SodiumJS>(
+    this,
+    callback,
+    secureKeys,
+    keyPairs,
+  );
+
+  @protected
+  Future<TResult> runIsolatedWithInstance<TResult, TSodiumJS extends SodiumJS>(
+    TSodiumJS sodium,
+    SodiumIsolateCallback<TResult> callback,
+    List<SecureKey> secureKeys,
+    List<KeyPair> keyPairs,
+  ) async {
+    // ignore: prefer_asserts_with_message for debug mode validation
+    assert(() {
+      // ignore: avoid_print for debug mode validation
+      print(
+        'WARNING: Sodium.runIsolated does not actually use parallel '
+        'execution on the web. Use service workers if needed!',
+      );
+      return true;
+    }());
+
+    return await callback(secureKeys, keyPairs);
+  }
+
+  @override
+  TransferrableSecureKey createTransferrableSecureKey(SecureKey secureKey) =>
+      TransferrableSecureKeyJS(secureKey);
+
+  @override
+  SecureKey materializeTransferrableSecureKey(
+    TransferrableSecureKey transferrableSecureKey,
+  ) {
+    if (transferrableSecureKey case TransferrableSecureKeyJS()) {
+      return transferrableSecureKey.secureKey;
+    } else {
+      throw SodiumException(
+        'Cannot materialize instance of type: '
+        '${transferrableSecureKey.runtimeType}',
+      );
+    }
+  }
+
+  @override
+  TransferrableKeyPair createTransferrableKeyPair(KeyPair keyPair) =>
+      TransferrableKeyPairJS(keyPair);
+
+  @override
+  KeyPair materializeTransferrableKeyPair(
+    TransferrableKeyPair transferrableKeyPair,
+  ) {
+    if (transferrableKeyPair case TransferrableKeyPairJS()) {
+      return transferrableKeyPair.keyPair;
+    } else {
+      throw SodiumException(
+        'Cannot materialize instance of type: '
+        '${transferrableKeyPair.runtimeType}',
+      );
+    }
+  }
+}

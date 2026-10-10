@@ -1,0 +1,94 @@
+import 'dart:async';
+import 'dart:ffi';
+import 'dart:typed_data';
+
+import 'package:meta/meta.dart';
+
+import '../../../../api/sodium_exception.dart';
+import '../../../bindings/libsodium.ffi.wrapper.dart';
+import '../../../bindings/sodium_pointer.dart';
+import '../../../bindings/sodium_scope.dart';
+
+@internal
+mixin SignConsumerFFIMixin<T extends Object>
+    implements StreamConsumer<Uint8List>, Sink<Uint8List> {
+  LibSodiumFFI get sodium;
+
+  final _signatureCompleter = Completer<T>();
+  late final SodiumPointer<UnsignedChar> _state;
+
+  @protected
+  Future<T> get result => _signatureCompleter.future;
+
+  @protected
+  T finalize(SodiumPointer<UnsignedChar> state);
+
+  @protected
+  void initState() {
+    _state = SodiumPointer.alloc(
+      sodium,
+      count: sodium.crypto_sign_statebytes(),
+      zeroMemory: true,
+    );
+
+    try {
+      final result = sodium.crypto_sign_init(_state.ptr.cast());
+      SodiumException.checkSucceededInt(result);
+
+      _state.memoryProtection = .noAccess;
+    } catch (e) {
+      _state.dispose();
+      rethrow;
+    }
+  }
+
+  @override
+  void add(Uint8List data) {
+    _ensureNotCompleted();
+
+    sodiumScope(sodium, (scope) {
+      final messagePtr = scope.copyList<UnsignedChar>(data);
+
+      _state.memoryProtection = .readWrite;
+      try {
+        final result = sodium.crypto_sign_update(
+          _state.ptr.cast(),
+          messagePtr.ptr,
+          messagePtr.count,
+        );
+        SodiumException.checkSucceededInt(result);
+      } finally {
+        _state.memoryProtection = .noAccess;
+      }
+    });
+  }
+
+  @override
+  Future<void> addStream(Stream<Uint8List> stream) {
+    _ensureNotCompleted();
+    return stream.map(add).drain<void>();
+  }
+
+  @override
+  Future<T> close() {
+    _ensureNotCompleted();
+
+    try {
+      _state.memoryProtection = .readWrite;
+      final result = finalize(_state);
+      _signatureCompleter.complete(result);
+    } catch (e, s) {
+      _signatureCompleter.completeError(e, s);
+    } finally {
+      _state.dispose();
+    }
+
+    return _signatureCompleter.future;
+  }
+
+  void _ensureNotCompleted() {
+    if (_signatureCompleter.isCompleted) {
+      throw StateError('Signature has already been finalized');
+    }
+  }
+}

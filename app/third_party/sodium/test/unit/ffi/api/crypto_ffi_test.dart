@@ -1,0 +1,189 @@
+@TestOn('dart-vm')
+library;
+
+import 'package:mocktail/mocktail.dart';
+import 'package:sodium/src/ffi/api/aead_aegis256_ffi.dart';
+import 'package:sodium/src/ffi/api/aead_chacha20poly1305_ffi.dart';
+import 'package:sodium/src/ffi/api/aead_xchacha20poly1305ietf_ffi.dart';
+import 'package:sodium/src/ffi/api/auth_ffi.dart';
+import 'package:sodium/src/ffi/api/box_ffi.dart';
+import 'package:sodium/src/ffi/api/crypto_ffi.dart';
+import 'package:sodium/src/ffi/api/generic_hash_ffi.dart';
+import 'package:sodium/src/ffi/api/ipcrypt_ffi.dart';
+import 'package:sodium/src/ffi/api/kdf_ffi.dart';
+import 'package:sodium/src/ffi/api/kdf_hkdf_sha256_ffi.dart';
+import 'package:sodium/src/ffi/api/kdf_hkdf_sha512_ffi.dart';
+import 'package:sodium/src/ffi/api/kem_ffi.dart';
+import 'package:sodium/src/ffi/api/kx_ffi.dart';
+import 'package:sodium/src/ffi/api/secret_box_ffi.dart';
+import 'package:sodium/src/ffi/api/secret_stream_ffi.dart';
+import 'package:sodium/src/ffi/api/short_hash_ffi.dart';
+import 'package:sodium/src/ffi/api/sign_ffi.dart';
+import 'package:sodium/src/ffi/api/xof_shake128_ffi.dart';
+import 'package:sodium/src/ffi/api/xof_shake256_ffi.dart';
+import 'package:sodium/src/ffi/api/xof_turboshake128_ffi.dart';
+import 'package:sodium/src/ffi/api/xof_turboshake256_ffi.dart';
+import 'package:sodium/src/ffi/bindings/libsodium.ffi.wrapper.dart';
+import 'package:test/test.dart';
+
+class MockSodiumFFI() extends Mock implements LibSodiumFFI;
+
+void main() {
+  final mockSodium = MockSodiumFFI();
+
+  late CryptoFFI sut;
+
+  setUp(() {
+    reset(mockSodium);
+
+    sut = CryptoFFI(mockSodium);
+  });
+
+  test('secretBox returns SecretBoxFFI instance', () {
+    expect(
+      sut.secretBox,
+      isA<SecretBoxFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('secretStream returns SecretStreamFFI instance', () {
+    expect(
+      sut.secretStream,
+      isA<SecretStreamFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('aeadChaCha20Poly1305 returns AeadChacha20Poly1305FFI instance', () {
+    expect(
+      sut.aeadChaCha20Poly1305,
+      isA<AeadChacha20Poly1305FFI>().having(
+        (p) => p.sodium,
+        'sodium',
+        mockSodium,
+      ),
+    );
+  });
+
+  test(
+    'aeadXChaCha20Poly1305IETF returns AeadXChaCha20Poly1305IETFFFI instance',
+    () {
+      expect(
+        sut.aeadXChaCha20Poly1305IETF,
+        isA<AeadXChaCha20Poly1305IETFFFI>().having(
+          (p) => p.sodium,
+          'sodium',
+          mockSodium,
+        ),
+      );
+    },
+  );
+
+  test('aeadAegis256 returns AeadAegis256FFI instance', () {
+    expect(
+      sut.aeadAegis256,
+      isA<AeadAegis256FFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('auth returns AuthFFI instance', () {
+    expect(
+      sut.auth,
+      isA<AuthFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('box returns BoxFFI instance', () {
+    expect(
+      sut.box,
+      isA<BoxFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('sign returns SignFFI instance', () {
+    expect(
+      sut.sign,
+      isA<SignFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('genericHash returns GenericHashFFI instance', () {
+    expect(
+      sut.genericHash,
+      isA<GenericHashFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('shortHash returns ShortHashFFI instance', () {
+    expect(
+      sut.shortHash,
+      isA<ShortHashFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('ipcrypt returns IpcryptFFI instance', () {
+    expect(
+      sut.ipcrypt,
+      isA<IpcryptFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('kdf returns KdfFFI instance', () {
+    expect(
+      sut.kdf,
+      isA<KdfFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('kdfHkdfSha256 returns KdfHkdfSha256FFI instance', () {
+    expect(
+      sut.kdfHkdfSha256,
+      isA<KdfHkdfSha256FFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('kdfHkdfSha512 returns KdfHkdfSha512FFI instance', () {
+    expect(
+      sut.kdfHkdfSha512,
+      isA<KdfHkdfSha512FFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('kem returns KemFFI instance', () {
+    expect(
+      sut.kem,
+      isA<KemFFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('kx returns KxFFI instance', () {
+    expect(sut.kx, isA<KxFFI>().having((p) => p.sodium, 'sodium', mockSodium));
+  });
+
+  test('xofShake128 returns XofShake128FFI instance', () {
+    expect(
+      sut.xofShake128,
+      isA<XofShake128FFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('xofShake256 returns XofShake256FFI instance', () {
+    expect(
+      sut.xofShake256,
+      isA<XofShake256FFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('xofTurboshake128 returns XofTurboshake128FFI instance', () {
+    expect(
+      sut.xofTurboshake128,
+      isA<XofTurboshake128FFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+
+  test('xofTurboshake256 returns XofTurboshake256FFI instance', () {
+    expect(
+      sut.xofTurboshake256,
+      isA<XofTurboshake256FFI>().having((p) => p.sodium, 'sodium', mockSodium),
+    );
+  });
+}

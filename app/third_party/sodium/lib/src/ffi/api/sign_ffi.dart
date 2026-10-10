@@ -1,0 +1,180 @@
+import 'dart:ffi';
+import 'dart:typed_data';
+
+import 'package:meta/meta.dart';
+
+import '../../api/key_pair.dart';
+import '../../api/secure_key.dart';
+import '../../api/sign.dart';
+import '../../api/sodium_exception.dart';
+import '../bindings/libsodium.ffi.wrapper.dart';
+import '../bindings/secure_key_native.dart';
+import '../bindings/sodium_scope.dart';
+import 'helpers/keygen_mixin.dart';
+import 'helpers/sign/signature_consumer_ffi.dart';
+import 'helpers/sign/verification_consumer_ffi.dart';
+
+@internal
+// ignore: public_member_api_docs false positive
+class SignFFI(final LibSodiumFFI sodium)
+    with SignValidations, KeygenMixin
+    implements Sign {
+  @override
+  int get publicKeyBytes => sodium.crypto_sign_publickeybytes();
+
+  @override
+  int get secretKeyBytes => sodium.crypto_sign_secretkeybytes();
+
+  @override
+  int get bytes => sodium.crypto_sign_bytes();
+
+  @override
+  int get seedBytes => sodium.crypto_sign_seedbytes();
+
+  @override
+  KeyPair keyPair() => keyPairImpl(
+    sodium: sodium,
+    secretKeyBytes: secretKeyBytes,
+    publicKeyBytes: publicKeyBytes,
+    implementation: sodium.crypto_sign_keypair,
+  );
+
+  @override
+  KeyPair seedKeyPair(SecureKey seed) {
+    validateSeed(seed);
+    return seedKeyPairImpl(
+      sodium: sodium,
+      seed: seed,
+      secretKeyBytes: secretKeyBytes,
+      publicKeyBytes: publicKeyBytes,
+      implementation: sodium.crypto_sign_seed_keypair,
+    );
+  }
+
+  @override
+  Uint8List call({required Uint8List message, required SecureKey secretKey}) {
+    validateSecretKey(secretKey);
+
+    return sodiumScope(sodium, (scope) {
+      final dataPtr = scope.alloc<UnsignedChar>(message.length + bytes)
+        ..fill(List<int>.filled(bytes, 0))
+        ..fill(message, offset: bytes);
+
+      final result = secretKey.runUnlockedNative(
+        sodium,
+        (secretKeyPtr) => sodium.crypto_sign(
+          dataPtr.ptr,
+          nullptr,
+          dataPtr.viewAt(bytes).ptr,
+          message.length,
+          secretKeyPtr.ptr,
+        ),
+      );
+      SodiumException.checkSucceededInt(result);
+
+      return scope.takeBytes(dataPtr);
+    });
+  }
+
+  @override
+  Uint8List open({
+    required Uint8List signedMessage,
+    required Uint8List publicKey,
+  }) {
+    validateSignedMessage(signedMessage);
+    validatePublicKey(publicKey);
+
+    return sodiumScope(sodium, (scope) {
+      final dataPtr = scope.copyList<UnsignedChar>(
+        signedMessage,
+        memoryProtection: .readWrite,
+      );
+      final publicKeyPtr = scope.copyList<UnsignedChar>(publicKey);
+
+      final result = sodium.crypto_sign_open(
+        dataPtr.viewAt(bytes).ptr,
+        nullptr,
+        dataPtr.ptr,
+        dataPtr.count,
+        publicKeyPtr.ptr,
+      );
+      SodiumException.checkSucceededInt(result);
+
+      return Uint8List.sublistView(scope.takeBytes<Uint8List>(dataPtr), bytes);
+    });
+  }
+
+  @override
+  Uint8List detached({
+    required Uint8List message,
+    required SecureKey secretKey,
+  }) {
+    validateSecretKey(secretKey);
+
+    return sodiumScope(sodium, (scope) {
+      final messagePtr = scope.copyList<UnsignedChar>(message);
+      final signaturePtr = scope.alloc<UnsignedChar>(bytes);
+
+      final result = secretKey.runUnlockedNative(
+        sodium,
+        (secretKeyPtr) => sodium.crypto_sign_detached(
+          signaturePtr.ptr,
+          nullptr,
+          messagePtr.ptr,
+          messagePtr.count,
+          secretKeyPtr.ptr,
+        ),
+      );
+      SodiumException.checkSucceededInt(result);
+
+      return scope.takeBytes(signaturePtr);
+    });
+  }
+
+  @override
+  bool verifyDetached({
+    required Uint8List message,
+    required Uint8List signature,
+    required Uint8List publicKey,
+  }) {
+    validateSignature(signature);
+    validatePublicKey(publicKey);
+
+    return sodiumScope(sodium, (scope) {
+      final messagePtr = scope.copyList<UnsignedChar>(message);
+      final signaturePtr = scope.copyList<UnsignedChar>(signature);
+      final publicKeyPtr = scope.copyList<UnsignedChar>(publicKey);
+
+      final result = sodium.crypto_sign_verify_detached(
+        signaturePtr.ptr,
+        messagePtr.ptr,
+        messagePtr.count,
+        publicKeyPtr.ptr,
+      );
+
+      return result == 0;
+    });
+  }
+
+  @override
+  SignatureConsumer createConsumer({required SecureKey secretKey}) {
+    validateSecretKey(secretKey);
+
+    return SignatureConsumerFFI(sodium: sodium, secretKey: secretKey);
+  }
+
+  @override
+  VerificationConsumer createVerifyConsumer({
+    required Uint8List signature,
+    required Uint8List publicKey,
+  }) {
+    validateSignature(signature);
+    validatePublicKey(publicKey);
+
+    return VerificationConsumerFFI(
+      sodium: sodium,
+      signature: signature,
+      publicKey: publicKey,
+    );
+  }
+}

@@ -1,0 +1,38 @@
+import 'package:code_assets/code_assets.dart';
+import 'package:meta/meta.dart';
+
+import 'automake_builder.dart';
+
+@internal
+// ignore: public_member_api_docs false positive
+final class LinuxBuilder(super.config, super.logger) extends AutomakeBuilder {
+  @override
+  Map<String, String> get environment {
+    final cFlags = ['-Os'];
+    final ldFlags = ['-Wl,-Bsymbolic-functions'];
+    return {
+      ...super.environment,
+      'CFLAGS': cFlags.followedBy(ldFlags).join(' '),
+      'LDFLAGS': ldFlags.join(' '),
+    };
+  }
+
+  @override
+  Iterable<String> get configureArgs sync* {
+    yield* super.configureArgs;
+    final host = _mapHost(config.targetArchitecture);
+    logger.debug('Detected host target: $host');
+    yield '--host=$host';
+  }
+
+  // See https://wiki.debian.org/Multiarch/Tuples
+  String _mapHost(Architecture arch) => switch (arch) {
+    .arm => 'arm-unknown-linux-gnueabihf',
+    .arm64 => 'aarch64-unknown-linux-gnu',
+    .ia32 => 'i686-unknown-linux-gnu',
+    .x64 => 'x86_64-unknown-linux-gnu',
+    .riscv32 => 'riscv32-unknown-linux-gnu',
+    .riscv64 => 'riscv64-unknown-linux-gnu',
+    _ => throw UnsupportedError('Unsupported linux architecture: $arch'),
+  };
+}

@@ -1,0 +1,111 @@
+import 'dart:async';
+import 'dart:ffi';
+import 'dart:typed_data';
+
+import 'package:meta/meta.dart';
+
+import '../../../../api/generic_hash.dart';
+import '../../../../api/secure_key.dart';
+import '../../../../api/sodium_exception.dart';
+import '../../../bindings/libsodium.ffi.wrapper.dart';
+import '../../../bindings/secure_key_native.dart';
+import '../../../bindings/sodium_pointer.dart';
+import '../../../bindings/sodium_scope.dart';
+
+@internal
+class GenericHashConsumerFFI({
+  required final LibSodiumFFI sodium,
+  required final int outLen,
+  SecureKey? key,
+}) implements GenericHashConsumer {
+  final _hashCompleter = Completer<Uint8List>();
+  late final SodiumPointer<Uint8> _state;
+
+  @override
+  Future<Uint8List> get hash => _hashCompleter.future;
+
+  this {
+    _state = SodiumPointer.alloc(
+      sodium,
+      count: sodium.crypto_generichash_statebytes(),
+      zeroMemory: true,
+    );
+
+    try {
+      final result = key.runMaybeUnlockedNative(
+        sodium,
+        (keyPtr) => sodium.crypto_generichash_init(
+          _state.ptr.cast(),
+          keyPtr?.ptr ?? nullptr,
+          keyPtr?.count ?? 0,
+          outLen,
+        ),
+      );
+      SodiumException.checkSucceededInt(result);
+
+      _state.memoryProtection = .noAccess;
+    } catch (e) {
+      _state.dispose();
+      rethrow;
+    }
+  }
+  @override
+  void add(Uint8List data) {
+    _ensureNotCompleted();
+
+    sodiumScope(sodium, (scope) {
+      final messagePtr = scope.copyList<UnsignedChar>(data);
+
+      _state.memoryProtection = .readWrite;
+      try {
+        final result = sodium.crypto_generichash_update(
+          _state.ptr.cast(),
+          messagePtr.ptr,
+          messagePtr.count,
+        );
+        SodiumException.checkSucceededInt(result);
+      } finally {
+        _state.memoryProtection = .noAccess;
+      }
+    });
+  }
+
+  @override
+  Future<void> addStream(Stream<Uint8List> stream) {
+    _ensureNotCompleted();
+    return stream.map(add).drain();
+  }
+
+  @override
+  Future<Uint8List> close() {
+    _ensureNotCompleted();
+
+    try {
+      sodiumScope(sodium, (scope) {
+        final outPtr = scope.alloc<UnsignedChar>(outLen, zeroMemory: true);
+
+        _state.memoryProtection = .readWrite;
+        final result = sodium.crypto_generichash_final(
+          _state.ptr.cast(),
+          outPtr.ptr,
+          outPtr.count,
+        );
+        SodiumException.checkSucceededInt(result);
+
+        _hashCompleter.complete(scope.takeBytes(outPtr));
+      });
+    } catch (e, s) {
+      _hashCompleter.completeError(e, s);
+    } finally {
+      _state.dispose();
+    }
+
+    return _hashCompleter.future;
+  }
+
+  void _ensureNotCompleted() {
+    if (_hashCompleter.isCompleted) {
+      throw StateError('Hash has already been finalized');
+    }
+  }
+}

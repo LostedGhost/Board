@@ -1,0 +1,18 @@
+include: package:dart_test_tools/package.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+    - "**.freezed.dart"
+    - "example/web/**"
+
+linter:
+  rules:
+    comment_references: false
+    avoid_catches_without_on_clauses: false

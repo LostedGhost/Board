@@ -1,0 +1,68 @@
+import 'package:meta/meta.dart';
+
+import '../../api/kdf.dart';
+import '../../api/secure_key.dart';
+import '../../api/sodium_exception.dart';
+import '../bindings/libsodium.ffi.wrapper.dart';
+import '../bindings/secure_key_native.dart';
+import '../bindings/sodium_scope.dart';
+import 'helpers/keygen_mixin.dart';
+
+@internal
+// ignore: public_member_api_docs false positive
+class KdfFFI(final LibSodiumFFI sodium)
+    with KdfValidations, KeygenMixin
+    implements Kdf {
+  @override
+  int get bytesMin => sodium.crypto_kdf_bytes_min();
+
+  @override
+  int get bytesMax => sodium.crypto_kdf_bytes_max();
+
+  @override
+  int get contextBytes => sodium.crypto_kdf_contextbytes();
+
+  @override
+  int get keyBytes => sodium.crypto_kdf_keybytes();
+
+  @override
+  SecureKey keygen() => keygenImpl(
+    sodium: sodium,
+    keyBytes: keyBytes,
+    implementation: sodium.crypto_kdf_keygen,
+  );
+
+  @override
+  SecureKey deriveFromKey({
+    required SecureKey masterKey,
+    required String context,
+    required BigInt subkeyId,
+    required int subkeyLen,
+  }) {
+    validateMasterKey(masterKey);
+    validateContext(context);
+    validateSubkeyLen(subkeyLen);
+
+    return sodiumScope(sodium, (scope) {
+      final subKey = scope.allocSecureKey(subkeyLen);
+      final contextPtr = scope.copyString(context, memoryWidth: contextBytes);
+
+      final result = subKey.runUnlockedNative(
+        (subKeyPtr) => masterKey.runUnlockedNative(
+          sodium,
+          (masterKeyPtr) => sodium.crypto_kdf_derive_from_key(
+            subKeyPtr.ptr,
+            subKeyPtr.count,
+            subkeyId.toSigned(64).toInt(),
+            contextPtr.ptr,
+            masterKeyPtr.ptr,
+          ),
+        ),
+        writable: true,
+      );
+      SodiumException.checkSucceededInt(result);
+
+      return scope.takeSecureKey(subKey);
+    });
+  }
+}
