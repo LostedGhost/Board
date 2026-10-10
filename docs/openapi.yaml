@@ -3,6 +3,108 @@ info:
   title: LuluBoard API
   version: 0.1.0
 paths:
+  /api/v1/appareils:
+    get:
+      operationId: appareils_list
+      tags:
+      - appareils
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appareil'
+          description: ''
+  /api/v1/appareils/{appareil_id}:
+    patch:
+      operationId: appareils_partial_update
+      parameters:
+      - in: path
+        name: appareil_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - appareils
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRenommer'
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appareil'
+          description: ''
+    delete:
+      operationId: appareils_destroy
+      parameters:
+      - in: path
+        name: appareil_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - appareils
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/appareils/courant/deverrouillage:
+    post:
+      operationId: appareils_courant_deverrouillage_create
+      tags:
+      - appareils
+      security:
+      - session: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemandeAvecCode'
+          description: ''
+  /api/v1/appareils/courant/deverrouiller-par-recuperation:
+    post:
+      operationId: appareils_courant_deverrouiller_par_recuperation_create
+      tags:
+      - appareils
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Recuperation'
+        required: true
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/appareils/courant/enveloppe:
+    get:
+      operationId: appareils_courant_enveloppe_retrieve
+      tags:
+      - appareils
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enveloppe'
+          description: ''
   /api/v1/auth/connexion:
     post:
       operationId: auth_connexion_create
@@ -151,6 +253,91 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/compte/enveloppe-recuperation:
+    get:
+      operationId: compte_enveloppe_recuperation_retrieve
+      tags:
+      - compte
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnveloppeRecuperation'
+          description: ''
+    put:
+      operationId: compte_enveloppe_recuperation_update
+      tags:
+      - compte
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Regeneration'
+        required: true
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/deverrouillages/{demande_id}/approuver:
+    post:
+      operationId: deverrouillages_approuver_create
+      parameters:
+      - in: path
+        name: demande_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - deverrouillages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Approbation'
+        required: true
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/deverrouillages/{demande_id}/refuser:
+    post:
+      operationId: deverrouillages_refuser_create
+      parameters:
+      - in: path
+        name: demande_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - deverrouillages
+      security:
+      - session: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/deverrouillages/en-attente:
+    get:
+      operationId: deverrouillages_en_attente_list
+      tags:
+      - deverrouillages
+      security:
+      - session: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Demande'
+          description: ''
   /api/v1/health:
     get:
       operationId: health_retrieve
@@ -257,6 +444,18 @@ components:
         * `EN_ATTENTE_DEVERROUILLAGE` - En Attente Deverrouillage
         * `ACTIF` - Actif
         * `REVOQUE` - Revoque
+    Approbation:
+      type: object
+      properties:
+        codeAffiche:
+          type: string
+          pattern: ^\d{6}$
+        cleMaitreEnveloppee:
+          type: string
+          format: base64url
+      required:
+      - cleMaitreEnveloppee
+      - codeAffiche
     ClesInitiales:
       type: object
       properties:
@@ -347,6 +546,77 @@ components:
       - appareil
       - email
       - motDePasse
+    Demande:
+      type: object
+      description: DemandeDeverrouillageDTO. Le code n'est montré qu'à l'appareil
+        demandeur.
+      properties:
+        id:
+          type: string
+          format: uuid
+        statut:
+          type: string
+        expireLe:
+          type: string
+          format: date-time
+        appareilDemandeur:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        clePubliqueDemandeur:
+          type: string
+      required:
+      - appareilDemandeur
+      - clePubliqueDemandeur
+      - expireLe
+      - id
+      - statut
+    DemandeAvecCode:
+      type: object
+      description: DemandeDeverrouillageDTO. Le code n'est montré qu'à l'appareil
+        demandeur.
+      properties:
+        id:
+          type: string
+          format: uuid
+        statut:
+          type: string
+        expireLe:
+          type: string
+          format: date-time
+        appareilDemandeur:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        clePubliqueDemandeur:
+          type: string
+        codeAffiche:
+          type: string
+      required:
+      - appareilDemandeur
+      - clePubliqueDemandeur
+      - codeAffiche
+      - expireLe
+      - id
+      - statut
+    Enveloppe:
+      type: object
+      properties:
+        cleMaitreEnveloppee:
+          type: string
+          format: base64url
+      required:
+      - cleMaitreEnveloppee
+    EnveloppeRecuperation:
+      type: object
+      properties:
+        cleMaitreEnveloppee:
+          type: string
+        defi:
+          type: string
+      required:
+      - cleMaitreEnveloppee
+      - defi
     Google:
       type: object
       properties:
@@ -423,6 +693,41 @@ components:
           maxLength: 254
       required:
       - email
+    PatchedRenommer:
+      type: object
+      properties:
+        nom:
+          type: string
+          maxLength: 100
+          minLength: 1
+    Recuperation:
+      type: object
+      properties:
+        cleMaitreEnveloppee:
+          type: string
+          format: base64url
+        signatureDefi:
+          type: string
+          format: base64url
+      required:
+      - cleMaitreEnveloppee
+      - signatureDefi
+    Regeneration:
+      type: object
+      description: Mot de passe requis ; pour un compte Google sans mot de passe,
+        un jeton Google récent (décision D8).
+      properties:
+        motDePasse:
+          type: string
+          maxLength: 128
+        idTokenGoogle:
+          type: string
+          maxLength: 4096
+        cleMaitreEnveloppee:
+          type: string
+          format: base64url
+      required:
+      - cleMaitreEnveloppee
     Reinitialisation:
       type: object
       properties:

@@ -1,0 +1,20 @@
+# LuluBoard — Journal des décisions
+
+> Depuis le 2026-10-10, l'utilisateur m'a délégué toutes les décisions logiques nécessaires pour livrer un MVP fonctionnel. Chaque décision est notée ici avec sa raison, pour le bilan final.
+> Les décisions antérieures (étapes 1 à 3) ont été validées explicitement : voir `01` à `05`.
+
+| # | Date | Sujet | Décision | Raison |
+|---|---|---|---|---|
+| D1 | 10/10 | Réinscription | Un e-mail inscrit mais jamais vérifié peut être réinscrit. | Éviter qu'une faute de frappe bloque une adresse. |
+| D2 | 10/10 | Google et compte e-mail | Pas de fusion automatique : se connecter par mot de passe, puis lier Google. | Empêcher la prise de contrôle d'un compte. |
+| D3 | 10/10 | Compte non vérifié à la connexion | `403 email_non_verifie` + renvoi d'un code (bon mot de passe uniquement). | Débloquer l'utilisateur sans révéler l'existence des comptes. |
+| D4 | 10/10 | Réponse de la réinitialisation | `204` sans corps ; le rappel A3 est affiché par l'app. | Un `204` ne peut pas porter de message. |
+| D5 | 10/10 | `/health` | `503` si la base est injoignable. | Permettre à l'hébergeur de détecter la panne. |
+| D6 | 10/10 | `X-App-Version` absent | Requête acceptée. | Pages publiques et outils de test. |
+| D7 | 10/10 | Refuser un déverrouillage | L'appareil demandeur est révoqué. | Refuser veut dire « ce n'est pas moi ». |
+| D8 | 10/10 | Régénérer la clé de récupération d'un compte Google sans mot de passe | Un jeton Google récent remplace le mot de passe. | Ces comptes n'ont pas de mot de passe à redemander. |
+| D9 | 10/10 | Code de déverrouillage | Visible seulement sur le nouvel appareil ; l'approbateur doit le recopier ; `clePubliqueDemandeur` ajoutée à la demande. | Preuve de présence physique ; l'approbateur a besoin de la clé publique pour envelopper la clé maître. |
+| D10 | 10/10 | Durées | Demande de déverrouillage : 10 min ; défi de récupération : 5 min, usage unique. | Courtes, pour limiter les attaques. |
+| D11 | 10/10 | Enveloppes invalidées | Leur contenu est vidé, pas seulement marqué. | Une fuite de la base ne les rend pas exploitables. |
+| D12 | 10/10 | Nouvelle clé de récupération | Doit être reconfirmée comme sauvegardée. | Même règle que A1. |
+| D13 | 10/10 | `GET /appareils` | Les appareils révoqués ne sont pas listés. | Ils ne servent plus à rien côté utilisateur. |

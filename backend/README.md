@@ -68,6 +68,7 @@ uv run python manage.py spectacular --file ../docs/openapi.yaml
 | 2.2 | `POST /api/v1/auth/deconnexion` | ✅ livré, testé |
 | 2.2 | `POST /api/v1/auth/mot-de-passe/oubli` | ✅ livré, testé |
 | 2.2 | `POST /api/v1/auth/mot-de-passe/reinitialiser` | ✅ livré, testé |
+| 2.3 | `GET /appareils`, `PATCH`/`DELETE /appareils/{id}`, `GET /appareils/courant/enveloppe`, `POST /appareils/courant/deverrouillage`, `GET /deverrouillages/en-attente`, `POST /deverrouillages/{id}/approuver`, `POST /deverrouillages/{id}/refuser`, `GET`/`PUT /compte/enveloppe-recuperation`, `POST /appareils/courant/deverrouiller-par-recuperation` | ✅ livré, testé |
 
 ### `GET /api/v1/health` (public)
 
@@ -131,3 +132,13 @@ Les corps de requête et de réponse sont ceux du contrat (`docs/05-contrat-api.
 | Énumération de comptes | e-mail inconnu, mauvais mot de passe ou compte Google seul : même code, même message et **même coût de calcul** (hash Argon2 factice) ; « mot de passe oublié » répond toujours `204` |
 | Logique métier | un code d'inscription n'est pas accepté pour réinitialiser un mot de passe (types séparés) ; 5 essais par code |
 | Session | la déconnexion supprime la session côté serveur (le jeton devient invalide immédiatement) |
+
+## Lot 2.3 — Appareils et clés
+
+- **Déverrouillage par un autre appareil** : le nouvel appareil crée une demande (code à 6 chiffres, 10 min) ; l'appareil actif voit la demande **sans le code**, avec la clé publique du demandeur, et doit recopier le code affiché (5 essais). Il envoie la clé maître enveloppée pour cette clé publique.
+- **Déverrouillage par la clé de récupération** : `GET /compte/enveloppe-recuperation` renvoie l'enveloppe + un **défi** (32 octets, 5 min, usage unique) ; le client signe le défi avec la clé Ed25519 dérivée de la clé maître ; le serveur vérifie avec `Compte.clePubliqueVerification` (PyNaCl).
+- **Révocation** : session supprimée, enveloppe invalidée **et vidée**, événement `appareil_revoque`. Refuser une demande révoque le demandeur.
+- **Régénération** : mot de passe exigé (ou jeton Google pour un compte sans mot de passe), l'ancienne enveloppe est vidée, la confirmation de sauvegarde est remise à zéro.
+- Événements temps réel publiés **après validation** de la transaction (`commun/evenements.py`).
+
+Revue de sécurité : contrôle d'accès par compte sur chaque identifiant (404 sinon) ; un appareil non déverrouillé ne peut ni approuver ni révoquer ; preuve cryptographique de possession de la clé maître ; défis à usage unique ; comparaisons en temps constant.
