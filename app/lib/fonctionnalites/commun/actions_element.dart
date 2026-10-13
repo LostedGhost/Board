@@ -11,6 +11,7 @@ import '../../noyau/session/service_compte.dart';
 import '../../noyau/stockage/base_locale.dart';
 import '../../ui/commun.dart';
 import '../rappels/dialogue_rappel.dart';
+import 'etiquettes.dart';
 
 /// Types partageables par lien public (H4).
 const _partageables = {TypeEl.postIt, TypeEl.snippet, TypeEl.liste, TypeEl.fichier};
@@ -34,6 +35,7 @@ class MenuElement extends StatelessWidget {
         const PopupMenuItem(value: 'copier', child: ListTile(leading: Icon(Icons.copy), title: Text('Copier le texte'))),
         if (type != TypeEl.fichier && type != TypeEl.liste)
           const PopupMenuItem(value: 'transformer', child: ListTile(leading: Icon(Icons.transform), title: Text('Transformer en…'))),
+        const PopupMenuItem(value: 'etiquettes', child: ListTile(leading: Icon(Icons.sell_outlined), title: Text('Étiquettes…'))),
         const PopupMenuItem(value: 'rappel', child: ListTile(leading: Icon(Icons.alarm_add), title: Text('Ajouter un rappel'))),
         PopupMenuItem(
           value: 'acces',
@@ -63,8 +65,9 @@ Future<void> executerAction(BuildContext context, Enr element, String action) as
       await Clipboard.setData(ClipboardData(text: Depot.texteDe(element)));
       if (context.mounted) afficherMessage(context, 'Copié.');
     case 'transformer':
-      final cible = await _choisirType(context, element['type']! as String);
-      if (cible == null || !context.mounted) return;
+      final choix = await _choisirType(context, element['type']! as String);
+      if (choix == null || !context.mounted) return;
+      final (cible, deplacer) = choix;
       String? parent;
       if (cible == TypeEl.tache) {
         parent = await _choisirListe(context);
@@ -73,7 +76,16 @@ Future<void> executerAction(BuildContext context, Enr element, String action) as
         parent = await _tableauParDefaut(context);
       }
       await depot.transformer(id, cible, parentId: parent);
-      if (context.mounted) afficherMessage(context, '${TypeEl.libelles[cible]} créé (l\'original est conservé).');
+      if (!deplacer) {
+        if (context.mounted) afficherMessage(context, '${TypeEl.libelles[cible]} créé (l\'original est conservé).');
+      } else {
+        await depot.supprimerAvecAnnulation(id);
+        if (context.mounted) {
+          proposerAnnulation(context, 'Déplacé vers ${TypeEl.libelles[cible]}.', () => depot.annulerSuppression(id));
+        }
+      }
+    case 'etiquettes':
+      await editerEtiquettes(context, id);
     case 'rappel':
       await ouvrirDialogueRappel(context, id);
     case 'acces':
@@ -93,17 +105,31 @@ Future<void> executerAction(BuildContext context, Enr element, String action) as
   }
 }
 
-Future<String?> _choisirType(BuildContext context, String actuel) => showDialog<String>(
-      context: context,
-      builder: (c) => SimpleDialog(
+/// Type cible et option « Déplacer » (H1 : copie par défaut ; déplacer supprime l'original, annulable).
+Future<(String, bool)?> _choisirType(BuildContext context, String actuel) {
+  var deplacer = false;
+  return showDialog<(String, bool)>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setState) => SimpleDialog(
         title: const Text('Transformer en'),
         children: [
           for (final t in [TypeEl.postIt, TypeEl.snippet, TypeEl.tache, TypeEl.pressePapier])
             if (t != actuel)
-              SimpleDialogOption(onPressed: () => Navigator.pop(c, t), child: Text(TypeEl.libelles[t]!)),
+              SimpleDialogOption(onPressed: () => Navigator.pop(c, (t, deplacer)), child: Text(TypeEl.libelles[t]!)),
+          const Divider(),
+          CheckboxListTile(
+            value: deplacer,
+            onChanged: (v) => setState(() => deplacer = v ?? false),
+            title: const Text('Déplacer'),
+            subtitle: const Text('Supprime l\'original (annulable)'),
+            controlAffinity: ListTileControlAffinity.leading,
+          ),
         ],
       ),
-    );
+    ),
+  );
+}
 
 Future<String?> _choisirListe(BuildContext context) async {
   final depot = context.noyau.depot;

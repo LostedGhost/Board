@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../fonctionnalites/annonces/bandeau_annonces.dart';
 import '../fonctionnalites/compte/ecrans_auth.dart';
 import '../fonctionnalites/envois/ecran_envois.dart';
 import '../fonctionnalites/fichiers/ecran_fichiers.dart';
@@ -18,25 +19,31 @@ import '../noyau/session/service_compte.dart';
 import '../noyau/synchro/moteur_synchro.dart';
 import 'capture_rapide.dart';
 import 'commun.dart';
+import 'glisser.dart';
 import 'theme.dart';
 
 class Section {
-  const Section(this.titre, this.icone, this.iconeActive, this.construire, {this.compteRequis = false});
+  const Section(this.titre, this.icone, this.iconeActive, this.construire, {this.compteRequis = false, this.cible});
 
   final String titre;
   final IconData icone;
   final IconData iconeActive;
   final Widget Function() construire;
   final bool compteRequis;
+
+  /// H5 : module recevant les éléments glissés sur cette destination (`null` : aucun dépôt).
+  final DestinationDepot? cible;
 }
 
 final sections = <Section>[
-  Section('Presse-papier', Icons.content_paste_outlined, Icons.content_paste, () => const EcranPressePapier()),
-  Section('Post-it', Icons.sticky_note_2_outlined, Icons.sticky_note_2, () => const EcranPostIt()),
-  Section('Tâches', Icons.checklist_outlined, Icons.checklist, () => const EcranTaches()),
-  Section('Snippets', Icons.code_outlined, Icons.code, () => const EcranSnippets()),
+  Section('Presse-papier', Icons.content_paste_outlined, Icons.content_paste, () => const EcranPressePapier(),
+      cible: DestinationDepot.pressePapier),
+  Section('Post-it', Icons.sticky_note_2_outlined, Icons.sticky_note_2, () => const EcranPostIt(), cible: DestinationDepot.postIt),
+  Section('Tâches', Icons.checklist_outlined, Icons.checklist, () => const EcranTaches(), cible: DestinationDepot.taches),
+  Section('Snippets', Icons.code_outlined, Icons.code, () => const EcranSnippets(), cible: DestinationDepot.snippets),
   Section('Fichiers', Icons.folder_outlined, Icons.folder, () => const EcranFichiers(), compteRequis: true),
-  Section('Envois', Icons.send_to_mobile_outlined, Icons.send_to_mobile, () => const EcranEnvois(), compteRequis: true),
+  Section('Envois', Icons.send_to_mobile_outlined, Icons.send_to_mobile, () => const EcranEnvois(),
+      compteRequis: true, cible: DestinationDepot.envois),
   Section('Réglages', Icons.settings_outlined, Icons.settings, () => const EcranReglages()),
 ];
 
@@ -100,6 +107,18 @@ class _CoquilleState extends State<Coquille> {
     super.dispose();
   }
 
+  /// Icône de destination servant aussi de cible de dépôt (H5).
+  Widget _icone(int i, {required bool active}) {
+    final s = sections[i];
+    return CibleDepot(
+      destination: s.cible,
+      onOuvrir: () {
+        if (mounted) setState(() => _index = i);
+      },
+      child: Icon(active ? s.iconeActive : s.icone),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final noyau = context.noyau;
@@ -144,6 +163,7 @@ class _CoquilleState extends State<Coquille> {
         children: [
           const BandeauVisiteur(),
           const BandeauCleRecuperation(),
+          const BandeauAnnonces(),
           Expanded(child: contenu),
         ],
       ),
@@ -154,8 +174,12 @@ class _CoquilleState extends State<Coquille> {
               onDestinationSelected: (i) => setState(() => _index = i),
               labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
               destinations: [
-                for (final s in sections)
-                  NavigationDestination(icon: Icon(s.icone), selectedIcon: Icon(s.iconeActive), label: s.titre),
+                for (final (i, s) in sections.indexed)
+                  NavigationDestination(
+                    icon: _icone(i, active: false),
+                    selectedIcon: _icone(i, active: true),
+                    label: s.titre,
+                  ),
               ],
             ),
     );
@@ -189,8 +213,12 @@ class _CoquilleState extends State<Coquille> {
             ),
           ),
           destinations: [
-            for (final s in sections)
-              NavigationRailDestination(icon: Icon(s.icone), selectedIcon: Icon(s.iconeActive), label: Text(s.titre)),
+            for (final (i, s) in sections.indexed)
+              NavigationRailDestination(
+                icon: _icone(i, active: false),
+                selectedIcon: _icone(i, active: true),
+                label: Text(s.titre),
+              ),
           ],
         ),
         const VerticalDivider(width: 1),

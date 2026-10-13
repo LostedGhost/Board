@@ -8,7 +8,9 @@ import '../../noyau/noyau.dart';
 import '../../noyau/session/service_compte.dart';
 import '../../noyau/stockage/base_locale.dart';
 import '../../plateformes/desktop.dart';
+import '../commun/etiquettes.dart';
 import '../../ui/commun.dart';
+import '../../ui/glisser.dart';
 import '../../ui/recherche_locale.dart';
 import '../../ui/theme.dart';
 import '../commun/actions_element.dart';
@@ -287,7 +289,8 @@ class _EcranFichiersState extends State<EcranFichiers> {
                         ? AucunResultat(recherche: _recherche, onVider: _vider)
                         : ListView(
                             padding: const EdgeInsets.fromLTRB(Lulu.md, Lulu.xs, Lulu.md, Lulu.xl),
-                            children: [for (final f in visibles) _ligne(f)],
+                            // H5 : un fichier se glisse sur « Envois » pour l'envoyer à un appareil.
+                            children: [for (final f in visibles) Glissable(element: f, child: _ligne(f))],
                           ),
                   ),
                 ],
@@ -337,7 +340,13 @@ class _EcranFichiersState extends State<EcranFichiers> {
                 ),
               ),
             ),
-            title: TexteSurligne(nom, _recherche, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TexteSurligne(nom, _recherche, maxLines: 1, overflow: TextOverflow.ellipsis),
+                PucesEtiquettes(f, recherche: _recherche, max: 4),
+              ],
+            ),
             subtitle: Text(
               [
                 tailleLisible(d['taille'] as num? ?? 0),

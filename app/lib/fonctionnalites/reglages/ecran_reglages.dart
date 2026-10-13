@@ -11,6 +11,7 @@ import '../../noyau/stockage/base_locale.dart';
 import '../../plateformes/desktop.dart';
 import '../../ui/commun.dart';
 import '../../ui/recherche_locale.dart';
+import '../aide/ecran_aide.dart';
 import '../compte/ecrans_auth.dart';
 
 List<T> _filtrerPar<T>(List<T> items, String recherche, String Function(T) label) {
@@ -179,6 +180,15 @@ class _EcranReglagesState extends State<EcranReglages> {
         _Item(icone: Icons.delete_forever, titre: 'Supprimer mon compte', sousTitre: 'Délai de grâce de 30 jours : se reconnecter annule la suppression', estErreur: true, onTap: () => _supprimerCompte(context)),
       ],
     ], sousTitre: 'Export · Connexion · Suppression'), r));
+    enfants.add(_SectionReglage(_Section('Aide', [
+      _Item(
+        icone: Icons.help_outline,
+        titre: 'Aide et raccourcis',
+        sousTitre: 'Questions fréquentes, raccourcis clavier, confidentialité, contact',
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => ouvrirAide(context),
+      ),
+    ], sousTitre: 'FAQ · Raccourcis · Support'), r));
     enfants.add(_SectionReglage(_Section('À propos', [
       _Item(icone: Icons.lock_outline, titre: 'LuluBoard 0.1.0', sousTitre: 'Vos contenus sont chiffrés sur vos appareils avant tout envoi. Le serveur ne peut pas les lire.'),
     ]), r));

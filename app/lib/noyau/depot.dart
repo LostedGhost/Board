@@ -199,6 +199,8 @@ class Depot {
       TypeEl.pressePapier => {'texte': texte},
       _ => throw ArgumentError(versType),
     };
+    final etiquettes = (e['donnees'] as Map?)?['etiquettes'];
+    if (etiquettes is List && etiquettes.isNotEmpty) donnees['etiquettes'] = List<Object?>.from(etiquettes); // H7 : les étiquettes suivent l'élément
     final nouveau = await creer(versType, donnees,
         parentId: parentId, sourceId: id, typeContenu: versType == TypeEl.pressePapier ? 'TEXTE' : null);
     if (deplacer) await supprimer(id);
@@ -287,4 +289,93 @@ class Depot {
   }
 
   Future<void> mettreAJourRappel(Enr rappel) => _ecrire(Entite.rappel, rappel);
+
+  // --- Étiquettes communes (H7) --------------------------------------------------------------
+  // Les étiquettes vivent dans `donnees['etiquettes']` (liste de textes) : elles sont donc chiffrées
+  // avec le reste de l'élément et ne sont jamais visibles du serveur. `modifierDonnees` fusionne les
+  // changements dans `donnees` : un écran qui enregistre ses propres champs (ex. l'éditeur de snippet)
+  // conserve les étiquettes existantes. `definirEtiquettes` passe aussi par cette fusion.
+
+  static const maxEtiquettes = 20;
+  static const longueurMaxEtiquette = 40;
+
+  /// Clé de comparaison : sans espaces superflus, en minuscules, sans `#` initial.
+  static String cleEtiquette(String e) => normaliserUneEtiquette(e).toLowerCase();
+
+  /// Une étiquette nettoyée, ou '' : trim, `#` initiaux retirés, espaces internes remplacés par `-`
+  /// (pour pouvoir l'écrire `#mon-projet` dans la recherche), longueur bornée.
+  static String normaliserUneEtiquette(String e) {
+    var t = e.trim();
+    while (t.startsWith('#')) {
+      t = t.substring(1).trimLeft();
+    }
+    t = t.replaceAll(RegExp(r'\s+'), '-');
+    if (t.length > longueurMaxEtiquette) t = t.substring(0, longueurMaxEtiquette).trimRight();
+    return t;
+  }
+
+  /// Normalise une liste : trim, vides retirés, doublons (insensibles à la casse) retirés en gardant
+  /// la première graphie, au plus [maxEtiquettes].
+  static List<String> normaliserEtiquettes(Iterable<Object?> brutes) {
+    final vues = <String>{};
+    final res = <String>[];
+    for (final b in brutes) {
+      if (b == null) continue;
+      final t = normaliserUneEtiquette(b.toString());
+      if (t.isEmpty || !vues.add(t.toLowerCase())) continue;
+      res.add(t);
+      if (res.length >= maxEtiquettes) break;
+    }
+    return res;
+  }
+
+  /// Étiquettes d'un élément (lecture tolérante : ancien champ hors `donnees` accepté).
+  static List<String> etiquettesDe(Enr element) {
+    final brut = ((element['donnees'] as Map?)?['etiquettes']) ?? element['etiquettes'];
+    return brut is List ? normaliserEtiquettes(brut) : const [];
+  }
+
+  /// Remplace les étiquettes de l'élément [id] (normalisées), sans toucher aux autres données.
+  Future<List<String>> definirEtiquettes(String id, List<String> etiquettes) async {
+    final propres = normaliserEtiquettes(etiquettes);
+    await modifierDonnees(id, {'etiquettes': propres});
+    return propres;
+  }
+
+  /// Compte d'utilisation par étiquette, sur un ensemble d'éléments déjà chargés.
+  /// Clé : graphie la plus fréquente (à égalité, la première rencontrée) ; tri par usage décroissant puis nom.
+  static List<({String nom, int nombre})> compterEtiquettes(Iterable<Enr> elements) {
+    final nombres = <String, int>{};
+    final graphies = <String, Map<String, int>>{};
+    for (final e in elements) {
+      for (final t in etiquettesDe(e)) {
+        final k = t.toLowerCase();
+        nombres[k] = (nombres[k] ?? 0) + 1;
+        final g = graphies[k] ??= {};
+        g[t] = (g[t] ?? 0) + 1;
+      }
+    }
+    final res = [
+      for (final k in nombres.keys)
+        (
+          nom: graphies[k]!.entries.reduce((a, b) => b.value > a.value ? b : a).key,
+          nombre: nombres[k]!,
+        ),
+    ];
+    res.sort((a, b) {
+      final c = b.nombre.compareTo(a.nombre);
+      return c != 0 ? c : a.nom.toLowerCase().compareTo(b.nom.toLowerCase());
+    });
+    return res;
+  }
+
+  /// Toutes les étiquettes du Board (éléments non supprimés), avec leur nombre d'utilisations.
+  Future<List<({String nom, int nombre})>> toutesLesEtiquettes() async =>
+      compterEtiquettes(await base.tous(Entite.element));
+
+  /// Vrai si [element] porte l'étiquette [etiquette] (comparaison insensible à la casse).
+  static bool aEtiquette(Enr element, String etiquette) {
+    final k = cleEtiquette(etiquette);
+    return k.isNotEmpty && etiquettesDe(element).any((t) => t.toLowerCase() == k);
+  }
 }

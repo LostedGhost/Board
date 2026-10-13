@@ -7,6 +7,7 @@ import '../../noyau/depot.dart';
 import '../../noyau/noyau.dart';
 import '../../noyau/stockage/base_locale.dart';
 import '../../ui/commun.dart';
+import '../../ui/mentions.dart';
 import '../../ui/recherche_locale.dart';
 import '../../ui/theme.dart';
 import '../commun/actions_element.dart';
@@ -276,7 +277,7 @@ class _Tableau extends StatelessWidget {
                 : FilledButton.icon(onPressed: onNouveau, icon: const Icon(Icons.add), label: const Text('Créer mon premier post-it')),
           );
         }
-        bool correspond(Enr p) => concorde(((p['donnees'] as Map?)?['contenu'] ?? '').toString(), recherche);
+        bool correspond(Enr p) => concorde(texteSansMentions(((p['donnees'] as Map?)?['contenu'] ?? '').toString()), recherche);
         final nbConcordants = postIts.where(correspond).length;
         if (snap.hasData && recherche.isNotEmpty && nbConcordants == 0) {
           return AucunResultat(recherche: recherche, onVider: onViderFiltre);
@@ -390,9 +391,14 @@ class _PostItState extends State<_PostIt> {
       corps = Text('Double-cliquez pour écrire…', style: TextStyle(color: texte.withValues(alpha: 0.75), fontStyle: FontStyle.italic));
     } else if (misEnAvant) {
       // Pendant le filtrage : texte brut, occurrences surlignées (lisibles sur le fond du post-it).
-      corps = _TexteSurlignePostIt(contenu, widget.recherche, texte);
+      corps = _TexteSurlignePostIt(texteSansMentions(contenu), widget.recherche, texte);
     } else {
-      corps = MarkdownBlock(data: contenu, selectable: false, config: configMarkdownPostIt(texte));
+      corps = MarkdownBlock(
+        data: markdownAvecMentions(contenu),
+        selectable: false,
+        config: configMarkdownPostIt(texte),
+        generator: generateurMentions(couleur: texte),
+      );
     }
 
     return Positioned(
@@ -404,7 +410,7 @@ class _PostItState extends State<_PostIt> {
         duration: Lulu.normal,
         opacity: filtre && !widget.concorde ? 0.2 : 1,
         child: Semantics(
-          label: contenu.isEmpty ? 'Post-it vide' : 'Post-it : ${contenu.split('\n').first}',
+          label: contenu.isEmpty ? 'Post-it vide' : 'Post-it : ${texteSansMentions(contenu).split('\n').first}',
           hint: 'Double-toucher pour modifier',
           onTap: () => ouvrirEditeurPostIt(context, widget.postIt),
           child: GestureDetector(

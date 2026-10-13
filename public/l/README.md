@@ -19,3 +19,12 @@ cd backend && CORS_ALLOWED_ORIGINS=http://127.0.0.1:5191 EMAIL_BACKEND=django.co
 cd public && python -m http.server 5191
 cd backend && uv run python e2e/liens_page_publique.py http://127.0.0.1:8000 e2e_mails   # imprime les URL
 ```
+
+## Test des fichiers et du signalement (sans Telegram ni LuluFiles réels)
+```bash
+cd backend && uv run python e2e/liens_page_publique.py faux-lulufiles 8099 <dossier temporaire>
+cd backend && FILES_USE_DIRECT_TELEGRAM=false LULUFILES_BASE_URL=http://127.0.0.1:8099 LULUFILES_API_KEY=cle-de-test \
+  CORS_ALLOWED_ORIGINS=http://127.0.0.1:5191 EMAIL_BACKEND=django.core.mail.backends.filebased.EmailBackend EMAIL_FILE_PATH=e2e_mails \
+  uv run python manage.py runserver 8000
+```
+Le script téléverse un fichier chiffré en secretstream (~150 Kio), vérifie son téléchargement public par l'API (sans et avec mot de passe) et le signalement (UC-I20), puis imprime les URL et le SHA-256 attendu du fichier.

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../noyau/depot.dart';
 import '../../noyau/noyau.dart';
 import '../../ui/commun.dart';
+import '../../ui/mentions.dart';
 import '../../ui/recherche_locale.dart';
 import '../../ui/theme.dart';
 import '../commun/actions_element.dart';
@@ -23,7 +24,38 @@ class _EcranTachesState extends State<EcranTaches> {
   String _filtre = '';
 
   @override
+  void initState() {
+    super.initState();
+    elementMentionneDemande.addListener(_surMention);
+    // L'écran peut être construit juste après la demande (changement de section) : on la traite.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _surMention());
+  }
+
+  /// H6 : une mention de tâche ou de liste ouvre la liste qui la contient.
+  Future<void> _surMention() async {
+    final id = elementMentionneDemande.value;
+    if (id == null || !mounted) return;
+    final depot = context.noyau.depot;
+    Enr? e = await depot.element(id);
+    if (e == null || (e['type'] != TypeEl.tache && e['type'] != TypeEl.liste)) return;
+    elementMentionneDemande.value = null;
+    // On remonte les sous-tâches jusqu'à la liste (garde-fou contre une boucle de parents).
+    for (var i = 0; i < 64 && e != null && e['type'] == TypeEl.tache; i++) {
+      final parent = e['parentId'] as String?;
+      e = parent == null ? null : await depot.element(parent);
+    }
+    final liste = e?['id'] as String?;
+    if (liste == null || !mounted) return;
+    _recherche.clear();
+    setState(() {
+      _filtre = '';
+      _liste = liste;
+    });
+  }
+
+  @override
   void dispose() {
+    elementMentionneDemande.removeListener(_surMention);
     _recherche.dispose();
     _focusRecherche.dispose();
     super.dispose();
@@ -143,6 +175,10 @@ class _EcranTachesState extends State<EcranTaches> {
 
 bool _faite(Enr t) => (t['donnees'] as Map?)?['faite'] == true;
 String _titre(Enr t) => ((t['donnees'] as Map?)?['titre'] ?? '').toString();
+String _notes(Enr t) => ((t['donnees'] as Map?)?['notes'] ?? '').toString();
+
+/// Texte sur lequel porte le filtre : titre et notes, mentions réduites à leur titre.
+String _texteFiltre(Enr t) => texteSansMentions('${_titre(t)}\n${_notes(t)}');
 
 class _Liste extends StatelessWidget {
   const _Liste({super.key, required this.liste, required this.recherche, required this.onViderFiltre, required this.champRecherche});
@@ -190,7 +226,7 @@ class _Liste extends StatelessWidget {
         // Filtre : une tâche reste visible si elle concorde ou si l'une de ses sous-tâches concorde.
         final visibles = <String>{};
         bool marquer(Enr e) {
-          var garde = concorde(_titre(e), recherche);
+          var garde = concorde(_texteFiltre(e), recherche);
           for (final s in parParent[e['id']] ?? const <Enr>[]) {
             if (marquer(s)) garde = true;
           }
@@ -336,24 +372,28 @@ class _ChampNouvelleTacheState extends State<_ChampNouvelleTache> {
         },
         child: ValueListenableBuilder<TextEditingValue>(
           valueListenable: _ctrl,
-          builder: (context, v, _) => TextField(
+          builder: (context, v, _) => AutocompletionMentions(
             controller: _ctrl,
             focusNode: _focus,
-            autofocus: widget.compact,
-            textInputAction: TextInputAction.done,
-            decoration: InputDecoration(
-              hintText: widget.compact ? 'Nouvelle sous-tâche, puis Entrée' : 'Ajouter une tâche, puis Entrée',
-              prefixIcon: const Icon(Icons.add, size: 20),
-              isDense: true,
-              suffixIcon: v.text.trim().isEmpty
-                  ? (widget.onFermer == null
-                      ? null
-                      : IconButton(tooltip: 'Fermer (Échap)', icon: const Icon(Icons.close, size: 18), onPressed: widget.onFermer))
-                  : IconButton(tooltip: 'Ajouter (Entrée)', icon: const Icon(Icons.keyboard_return, size: 18), onPressed: _ajouter),
+            child: TextField(
+              controller: _ctrl,
+              focusNode: _focus,
+              autofocus: widget.compact,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: widget.compact ? 'Nouvelle sous-tâche, puis Entrée' : 'Ajouter une tâche, puis Entrée',
+                prefixIcon: const Icon(Icons.add, size: 20),
+                isDense: true,
+                suffixIcon: v.text.trim().isEmpty
+                    ? (widget.onFermer == null
+                        ? null
+                        : IconButton(tooltip: 'Fermer (Échap)', icon: const Icon(Icons.close, size: 18), onPressed: widget.onFermer))
+                    : IconButton(tooltip: 'Ajouter (Entrée)', icon: const Icon(Icons.keyboard_return, size: 18), onPressed: _ajouter),
+              ),
+              onSubmitted: (_) => _ajouter(),
+              // Sans ceci, Entrée retire le focus du champ : on veut pouvoir enchaîner les saisies.
+              onEditingComplete: () {},
             ),
-            onSubmitted: (_) => _ajouter(),
-            // Sans ceci, Entrée retire le focus du champ : on veut pouvoir enchaîner les saisies.
-            onEditingComplete: () {},
           ),
         ),
       );
@@ -410,6 +450,7 @@ class _TacheState extends State<_Tache> {
     final d = (widget.tache['donnees'] as Map?) ?? {};
     final id = widget.tache['id']! as String;
     final titre = (d['titre'] ?? '').toString();
+    final notes = (d['notes'] ?? '').toString().trim();
     final faite = d['faite'] == true;
     final priorite = (d['priorite'] ?? 'NORMALE').toString();
     final echeance = DateTime.tryParse(d['echeance'] as String? ?? '');
@@ -417,7 +458,7 @@ class _TacheState extends State<_Tache> {
     final sousTaches = widget.enfants[id] ?? const <Enr>[];
     final sousVisibles = sousTaches.where((e) => widget.visibles.contains(e['id'])).toList();
     final sousFaites = sousTaches.where(_faite).length;
-    final concordeTitre = concorde(titre, widget.recherche);
+    final concordeTitre = concorde(_texteFiltre(widget.tache), widget.recherche);
     final attenuee = faite || (widget.recherche.isNotEmpty && !concordeTitre);
 
     final infos = <Widget>[
@@ -450,23 +491,41 @@ class _TacheState extends State<_Tache> {
         height: 40,
         child: Checkbox(
           value: faite,
-          semanticLabel: faite ? 'Marquer « $titre » comme à faire' : 'Marquer « $titre » comme terminée',
+          semanticLabel: faite
+              ? 'Marquer « ${texteSansMentions(titre)} » comme à faire'
+              : 'Marquer « ${texteSansMentions(titre)} » comme terminée',
           onChanged: (v) => depot.modifierDonnees(id, {'faite': v ?? false}),
         ),
       ),
-      title: TexteSurligne(
+      title: TexteAvecMentions(
         titre,
-        widget.recherche,
+        recherche: widget.recherche,
         style: t.textTheme.bodyLarge?.copyWith(
           decoration: faite ? TextDecoration.lineThrough : null,
           color: attenuee ? s.onSurfaceVariant : null,
         ),
       ),
-      subtitle: infos.isEmpty
+      subtitle: infos.isEmpty && notes.isEmpty
           ? null
           : Padding(
               padding: const EdgeInsets.only(top: Lulu.xs),
-              child: Wrap(spacing: Lulu.sm, runSpacing: Lulu.xs, crossAxisAlignment: WrapCrossAlignment.center, children: infos),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (notes.isNotEmpty)
+                    TexteAvecMentions(
+                      notes,
+                      recherche: widget.recherche,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.textTheme.bodySmall?.copyWith(color: s.onSurfaceVariant),
+                    ),
+                  if (notes.isNotEmpty && infos.isNotEmpty) const SizedBox(height: Lulu.xs),
+                  if (infos.isNotEmpty)
+                    Wrap(spacing: Lulu.sm, runSpacing: Lulu.xs, crossAxisAlignment: WrapCrossAlignment.center, children: infos),
+                ],
+              ),
             ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -495,8 +554,11 @@ class _TacheState extends State<_Tache> {
         ],
       ),
       onTap: () async {
-        final nouveau = await demanderTexte(context, 'Modifier la tâche', initial: titre, libelle: 'Titre');
-        if (nouveau != null && nouveau.isNotEmpty) await depot.modifierDonnees(id, {'titre': nouveau});
+        final r = await showDialog<({String titre, String notes})>(
+          context: context,
+          builder: (_) => _EditionTache(id: id, titre: titre, notes: (d['notes'] ?? '').toString()),
+        );
+        if (r != null && r.titre.isNotEmpty) await depot.modifierDonnees(id, {'titre': r.titre, 'notes': r.notes});
       },
     );
 
@@ -541,6 +603,85 @@ class _TacheState extends State<_Tache> {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// Édition du titre et des notes d'une tâche ; « [[ » ouvre l'autocomplétion des mentions (H6).
+class _EditionTache extends StatefulWidget {
+  const _EditionTache({required this.id, required this.titre, required this.notes});
+
+  final String id;
+  final String titre;
+  final String notes;
+
+  @override
+  State<_EditionTache> createState() => _EditionTacheState();
+}
+
+class _EditionTacheState extends State<_EditionTache> {
+  late final _titre = TextEditingController(text: widget.titre);
+  late final _notes = TextEditingController(text: widget.notes);
+  final _focusTitre = FocusNode();
+  final _focusNotes = FocusNode();
+
+  @override
+  void dispose() {
+    _titre.dispose();
+    _notes.dispose();
+    _focusTitre.dispose();
+    _focusNotes.dispose();
+    super.dispose();
+  }
+
+  void _valider() => Navigator.pop(context, (titre: _titre.text.trim(), notes: _notes.text.trim()));
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return AlertDialog(
+      title: const Text('Modifier la tâche'),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AutocompletionMentions(
+              controller: _titre,
+              focusNode: _focusTitre,
+              exclureId: widget.id,
+              child: TextField(
+                controller: _titre,
+                focusNode: _focusTitre,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Titre'),
+                onSubmitted: (_) => _valider(),
+              ),
+            ),
+            const SizedBox(height: Lulu.md),
+            AutocompletionMentions(
+              controller: _notes,
+              focusNode: _focusNotes,
+              exclureId: widget.id,
+              child: TextField(
+                controller: _notes,
+                focusNode: _focusNotes,
+                minLines: 3,
+                maxLines: 8,
+                decoration: const InputDecoration(labelText: 'Notes', alignLabelWithHint: true),
+              ),
+            ),
+            const SizedBox(height: Lulu.sm),
+            Text('Astuce : tapez [[ pour mentionner un post-it, une tâche, un snippet ou un fichier.',
+                style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+        FilledButton(onPressed: _valider, child: const Text('Valider')),
       ],
     );
   }

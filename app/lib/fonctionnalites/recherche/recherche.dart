@@ -7,6 +7,7 @@ import '../../ui/commun.dart';
 import '../../ui/recherche_locale.dart';
 import '../../ui/theme.dart';
 import '../commun/actions_element.dart';
+import '../commun/etiquettes.dart';
 
 /// G2 / H8 : une seule recherche sur tout le Board, faite sur l'appareil (données chiffrées côté serveur).
 Future<void> ouvrirRecherche(BuildContext context) =>
@@ -34,6 +35,42 @@ const _pluriels = {
 };
 
 const _maxResultats = 100;
+const _maxSuggestions = 8;
+
+/// Requête décomposée (H7) : texte libre + filtres `#etiquette`.
+/// [etiquettes] : filtres validés (correspondance exacte, insensible à la casse) ;
+/// [enCours] : étiquette en cours de frappe (dernier mot commençant par `#`, correspondance par préfixe).
+typedef _Requete = ({String texte, List<String> etiquettes, String? enCours});
+
+_Requete _analyser(String brut) {
+  final mots = brut.trim().split(RegExp(r'\s+')).where((m) => m.isNotEmpty).toList();
+  if (!mots.any((m) => m.startsWith('#'))) return (texte: brut.trim(), etiquettes: const [], enCours: null);
+  final finitParEspace = RegExp(r'\s$').hasMatch(brut);
+  final texte = <String>[];
+  final etiquettes = <String>[];
+  String? enCours;
+  for (var i = 0; i < mots.length; i++) {
+    final m = mots[i];
+    if (!m.startsWith('#')) {
+      texte.add(m);
+      continue;
+    }
+    final k = Depot.cleEtiquette(m);
+    if (i == mots.length - 1 && !finitParEspace) {
+      enCours = k;
+    } else if (k.isNotEmpty && !etiquettes.contains(k)) {
+      etiquettes.add(k);
+    }
+  }
+  return (texte: texte.join(' '), etiquettes: etiquettes, enCours: enCours);
+}
+
+bool _correspond(Enr e, _Requete r) {
+  final tags = [for (final t in Depot.etiquettesDe(e)) t.toLowerCase()];
+  if (!r.etiquettes.every(tags.contains)) return false;
+  if (r.enCours != null && !tags.any((t) => t.startsWith(r.enCours!))) return false;
+  return r.texte.isEmpty || concorde(Depot.texteDe(e), r.texte) || tags.any((t) => concorde(t, r.texte));
+}
 
 class _Recherche extends StatefulWidget {
   const _Recherche();
@@ -49,6 +86,7 @@ class _RechercheState extends State<_Recherche> {
   Stream<List<Enr>>? _flux;
   int _selection = 0;
   List<Enr> _resultats = const []; // ordre d'affichage, pour la navigation clavier
+  List<String> _suggestions = const []; // étiquettes proposées quand on tape `#`
 
   @override
   void didChangeDependencies() {
@@ -64,11 +102,33 @@ class _RechercheState extends State<_Recherche> {
   }
 
   String get _recherche => _q.text.trim();
+  _Requete get _requete => _analyser(_q.text);
+
+  void _remplacer(String texte) {
+    _q.value = TextEditingValue(text: texte, selection: TextSelection.collapsed(offset: texte.length));
+    setState(() => _selection = 0);
+    _focus.requestFocus();
+  }
+
+  /// Remplace l'étiquette en cours de frappe par [tag] (suggestion choisie ou Tab).
+  void _completer(String tag) {
+    final base = _q.text.replaceFirst(RegExp(r'#\S*$'), '');
+    _remplacer('$base#$tag ');
+  }
+
+  /// Clic sur une puce : ajoute le filtre `#tag`, ou le retire s'il est déjà actif.
+  void _basculerEtiquette(String tag) {
+    final k = Depot.cleEtiquette(tag);
+    final mots = _q.text.trim().split(RegExp(r'\s+')).where((m) => m.isNotEmpty).toList();
+    final sans = mots.where((m) => !(m.startsWith('#') && Depot.cleEtiquette(m) == k)).toList();
+    if (sans.length == mots.length) sans.add('#$tag');
+    _remplacer(sans.isEmpty ? '' : '${sans.join(' ')} ');
+  }
 
   /// Ligne la plus parlante : la première qui contient la recherche, sinon la première.
   String _titre(Enr e) {
     final lignes = Depot.texteDe(e).split('\n');
-    final r = _recherche;
+    final r = _requete.texte;
     final l = r.isEmpty ? lignes.first : lignes.firstWhere((l) => concorde(l, r), orElse: () => lignes.first);
     final t = l.trim();
     return t.isEmpty ? '(sans texte)' : t;
@@ -96,6 +156,10 @@ class _RechercheState extends State<_Recherche> {
   KeyEventResult _touche(FocusNode _, KeyEvent ev) {
     if (ev is! KeyDownEvent && ev is! KeyRepeatEvent) return KeyEventResult.ignored;
     final k = ev.logicalKey;
+    if (k == LogicalKeyboardKey.tab && _suggestions.isNotEmpty) {
+      if (ev is KeyDownEvent) _completer(_suggestions.first);
+      return KeyEventResult.handled;
+    }
     if (k == LogicalKeyboardKey.arrowDown) {
       _deplacer(1);
       return KeyEventResult.handled;
@@ -148,7 +212,7 @@ class _RechercheState extends State<_Recherche> {
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.search),
-                      hintText: 'Rechercher dans tout le Board…',
+                      hintText: 'Rechercher dans tout le Board… (#étiquette pour filtrer)',
                       suffixIcon: v.text.isEmpty
                           ? null
                           : IconButton(tooltip: 'Vider (Échap)', icon: const Icon(Icons.close), onPressed: _vider),
@@ -171,7 +235,7 @@ class _RechercheState extends State<_Recherche> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Lulu.md, vertical: Lulu.sm),
               child: Text(
-                '↑ ↓ naviguer · Entrée copier · Échap ${_q.text.isEmpty ? 'fermer' : 'vider'}',
+                '↑ ↓ naviguer · Entrée copier · #étiquette filtrer · Échap ${_q.text.isEmpty ? 'fermer' : 'vider'}',
                 style: t.textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
@@ -184,9 +248,51 @@ class _RechercheState extends State<_Recherche> {
 
   Widget _liste(List<Enr> tous) {
     final r = _recherche;
-    final trouves = r.isEmpty
+    final req = _requete;
+    final enCours = req.enCours;
+    final compte = enCours == null ? const <({String nom, int nombre})>[] : Depot.compterEtiquettes(tous);
+    _suggestions = [
+      for (final t in compte)
+        if (t.nom.toLowerCase().startsWith(enCours!) && !req.etiquettes.contains(t.nom.toLowerCase())) t.nom,
+    ].take(_maxSuggestions).toList();
+    final suggestions = _suggestions;
+    final liste = _resultatsListe(tous, r, req);
+    if (suggestions.isEmpty) return liste;
+    final nombres = {for (final t in compte) t.nom: t.nombre};
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Lulu.md, 0, Lulu.md, Lulu.sm),
+          child: Semantics(
+            label: 'Étiquettes suggérées',
+            container: true,
+            child: Wrap(
+              spacing: Lulu.sm,
+              runSpacing: Lulu.xs,
+              children: [
+                for (final (i, s) in suggestions.indexed)
+                  ActionChip(
+                    avatar: const Icon(Icons.sell_outlined, size: 16),
+                    label: Text('#$s · ${nombres[s] ?? 0}'),
+                    tooltip: i == 0 ? 'Tab pour compléter' : null,
+                    onPressed: () => _completer(s),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(child: liste),
+      ],
+    );
+  }
+
+  Widget _resultatsListe(List<Enr> tous, String r, _Requete req) {
+    final filtre = req.texte.isNotEmpty || req.etiquettes.isNotEmpty || req.enCours != null;
+    final trouves = !filtre
         ? tous.where((e) => e['epingleAccesRapide'] == true).toList()
-        : tous.where((e) => concorde(Depot.texteDe(e), r)).toList();
+        : tous.where((e) => _correspond(e, req)).toList();
     trouves.sort((a, b) => (b['modifieLe'] as String? ?? '').compareTo(a['modifieLe'] as String? ?? ''));
     final limite = trouves.length > _maxResultats;
 
@@ -252,8 +358,24 @@ class _RechercheState extends State<_Recherche> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Lulu.rMd)),
         dense: true,
         leading: Tooltip(message: libelle, child: Icon(_icones[e['type']] ?? Icons.notes, semanticLabel: libelle)),
-        title: TexteSurligne(_titre(e), _recherche, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text('$libelle · ${dateCourte(e['modifieLe'] as String?)}'),
+        title: TexteSurligne(_titre(e), _requete.texte, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Depot.etiquettesDe(e).isEmpty
+            ? Text('$libelle · ${dateCourte(e['modifieLe'] as String?)}')
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('$libelle · ${dateCourte(e['modifieLe'] as String?)}'),
+                  const SizedBox(height: Lulu.xs),
+                  PucesEtiquettes(
+                    e,
+                    max: 6,
+                    recherche: _requete.enCours ?? '',
+                    actives: _requete.etiquettes.toSet(),
+                    onTap: _basculerEtiquette,
+                  ),
+                ],
+              ),
         onTap: () {
           setState(() => _selection = index);
           _activer(e);

@@ -9,7 +9,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../noyau/depot.dart';
 import '../../noyau/noyau.dart';
 import '../../plateformes/desktop.dart';
+import '../commun/etiquettes.dart';
 import '../../ui/commun.dart';
+import '../../ui/glisser.dart';
 import '../../ui/recherche_locale.dart';
 import '../../ui/theme.dart';
 import '../commun/actions_element.dart';
@@ -107,6 +109,7 @@ class _EcranPressePapierState extends State<EcranPressePapier> {
               ],
             ),
           ),
+          const AstuceGlisser(),
           Expanded(
             child: StreamBuilder<List<Enr>>(
               stream: depot.elements(TypeEl.pressePapier),
@@ -146,7 +149,7 @@ class _EcranPressePapierState extends State<EcranPressePapier> {
                     if (l is String) return _EnTeteGroupe(l, premier: i == 0);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: Lulu.sm),
-                      child: _CarteEntree(l as Enr, recherche: q),
+                      child: Glissable(element: l as Enr, child: _CarteEntree(l, recherche: q)),
                     );
                   },
                 );
@@ -306,6 +309,7 @@ class _CarteEntreeState extends State<_CarteEntree> {
                           overflow: TextOverflow.ellipsis,
                           style: lien ? TextStyle(color: t.colorScheme.primary) : null,
                         ),
+                      PucesEtiquettes(e, recherche: widget.recherche, max: 4),
                       const SizedBox(height: Lulu.xs),
                       Text(
                         dateCourte(_date(e)),

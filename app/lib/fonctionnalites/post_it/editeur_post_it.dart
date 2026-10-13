@@ -8,6 +8,7 @@ import '../../noyau/depot.dart';
 import '../../noyau/noyau.dart';
 import '../../plateformes/desktop.dart';
 import '../../ui/commun.dart';
+import '../../ui/mentions.dart';
 import '../../ui/theme.dart';
 
 /// Noms lisibles des 6 couleurs par défaut (même ordre que [ThemeLulu.couleursPostIt]).
@@ -222,25 +223,38 @@ class _EditeurPostItState extends State<_EditeurPostIt> {
                 child: _apercu
                     ? (contenu.trim().isEmpty
                         ? Center(child: Text('Rien à afficher pour l\'instant.', style: TextStyle(color: texte.withValues(alpha: 0.7), fontStyle: FontStyle.italic)))
-                        : SingleChildScrollView(child: MarkdownBlock(data: contenu, config: configMarkdownPostIt(texte))))
-                    : TextField(
+                        : SingleChildScrollView(
+                            child: MarkdownBlock(
+                              data: markdownAvecMentions(contenu),
+                              config: configMarkdownPostIt(texte),
+                              generator: generateurMentions(couleur: texte),
+                            ),
+                          ))
+                    // H6 : « [[ » ouvre l'autocomplétion des mentions.
+                    : AutocompletionMentions(
                         controller: _contenu,
                         focusNode: _focus,
-                        autofocus: true,
-                        expands: true,
-                        maxLines: null,
-                        textAlignVertical: TextAlignVertical.top,
-                        style: TextStyle(color: texte),
-                        cursorColor: texte,
+                        exclureId: _id,
                         onChanged: (_) => _planifier(),
-                        decoration: InputDecoration(
-                          hintText: 'Markdown accepté : **gras**, *italique*, # titre, - liste, - [ ] case à cocher',
-                          hintStyle: TextStyle(color: texte.withValues(alpha: 0.6)),
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
+                        child: TextField(
+                          controller: _contenu,
+                          focusNode: _focus,
+                          autofocus: true,
+                          expands: true,
+                          maxLines: null,
+                          textAlignVertical: TextAlignVertical.top,
+                          style: TextStyle(color: texte),
+                          cursorColor: texte,
+                          onChanged: (_) => _planifier(),
+                          decoration: InputDecoration(
+                            hintText: 'Markdown accepté : **gras**, *italique*, # titre, - liste, - [ ] case à cocher, [[ pour mentionner',
+                            hintStyle: TextStyle(color: texte.withValues(alpha: 0.6)),
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
               ),

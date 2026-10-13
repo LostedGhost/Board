@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../noyau/depot.dart';
 import '../../noyau/noyau.dart';
 import '../../ui/commun.dart';
+import '../../ui/glisser.dart';
 import '../../ui/recherche_locale.dart';
 import '../../ui/theme.dart';
 import '../commun/actions_element.dart';
@@ -116,6 +117,7 @@ class _EcranSnippetsState extends State<EcranSnippets> {
                     ],
                   ),
                 ),
+                const AstuceGlisser(padding: EdgeInsets.fromLTRB(Lulu.md, Lulu.xs, Lulu.md, 0)),
                 Expanded(
                   child: snippets.isEmpty
                       ? AucunResultat(recherche: q.isEmpty ? (langageActif ?? '') : q, onVider: _viderFiltre)
@@ -128,7 +130,8 @@ class _EcranSnippetsState extends State<EcranSnippets> {
                             mainAxisSpacing: Lulu.md,
                           ),
                           itemCount: snippets.length,
-                          itemBuilder: (context, i) => _CarteSnippet(snippets[i], recherche: q),
+                          itemBuilder: (context, i) =>
+                              Glissable(element: snippets[i], child: _CarteSnippet(snippets[i], recherche: q)),
                         ),
                 ),
               ],

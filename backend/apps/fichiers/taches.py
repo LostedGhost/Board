@@ -4,6 +4,7 @@ import logging
 import os
 import time
 
+import httpx
 from celery import shared_task
 from django.db import transaction
 
@@ -70,7 +71,7 @@ def transferer(fichier_id):
             _vers_telegram(fichier)
         else:
             _vers_lulufiles(fichier)
-    except (stockage.ErreurStockage, OSError) as erreur:
+    except (stockage.ErreurStockage, OSError, httpx.HTTPError) as erreur:
         journal.warning("Transfert du fichier %s en échec : %s", fichier_id, erreur)
         with transaction.atomic():
             _statut(fichier, StatutFichier.ECHEC, str(erreur)[:500])

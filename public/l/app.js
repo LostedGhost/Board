@@ -157,6 +157,7 @@
     $("formulaire-mdp").hidden = true;
     $("resultat").hidden = true;
     $("actions-live").hidden = true;
+    afficherSignalement(false);
     const bloc = $("etat");
     bloc.hidden = false;
     bloc.classList.add("erreur-etat");
@@ -314,13 +315,23 @@
     progression.value = 0;
     message.textContent = "Téléchargement et déchiffrement en cours…";
     try {
-      let url = API + "/public/liens/" + encodeURIComponent(etat.jeton) + "/fichier";
-      if (etat.jetonTelechargement) url += "?t=" + encodeURIComponent(etat.jetonTelechargement);
-      let reponse;
-      try {
-        reponse = await fetch(url, { credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer" });
-      } catch (_) {
-        throw new ErreurLien("Serveur injoignable", "Le téléchargement a échoué : serveur injoignable.");
+      const demander = async () => {
+        let url = API + "/public/liens/" + encodeURIComponent(etat.jeton) + "/fichier";
+        if (etat.jetonTelechargement) url += "?t=" + encodeURIComponent(etat.jetonTelechargement);
+        try {
+          return await fetch(url, { credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer" });
+        } catch (_) {
+          throw new ErreurLien("Serveur injoignable", "Le téléchargement a échoué : serveur injoignable.");
+        }
+      };
+      let reponse = await demander();
+      if (reponse.status === 403 && etat.verificateur) {
+        // Le jeton de téléchargement (10 min) a expiré : on en redemande un sans ressaisie du mot de passe.
+        const r = await appelApi("/public/liens/" + encodeURIComponent(etat.jeton) + "/deverrouiller", {
+          method: "POST", corps: { verificateurMotDePasse: vers64(etat.verificateur) },
+        });
+        etat.jetonTelechargement = r.jetonTelechargement || null;
+        reponse = await demander();
       }
       if (!reponse.ok) {
         let code = null;
@@ -419,6 +430,7 @@
     $("etat").hidden = true;
     $("formulaire-mdp").hidden = true;
     $("actions-live").hidden = element.type === "FICHIER";
+    afficherSignalement(true);
     $("maj-texte").textContent = "Contenu en direct : dernière version, chargée à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + ".";
     const titre = element.type === "FICHIER" ? donnees.nom : donnees.titre;
     document.title = (titre || TYPES[element.type] || "Contenu partagé") + " · LuluBoard";
@@ -450,6 +462,7 @@
   function afficherFormulaire(meta) {
     $("etat").hidden = true;
     $("formulaire-mdp").hidden = false;
+    afficherSignalement(true);
     document.title = "Lien protégé · LuluBoard";
     const champ = $("champ-mdp");
     champ.focus();
@@ -542,11 +555,138 @@
     etat.minuteur = null;
   }
 
+  // --- Signalement (UC-I20) ---------------------------------------------------------------
+
+  const MOTIFS = {
+    CONTENU_ILLICITE: "Contenu illicite",
+    ATTEINTE_DROIT_AUTEUR: "Atteinte au droit d'auteur",
+    LOGICIEL_MALVEILLANT: "Logiciel malveillant ou virus",
+    HAMECONNAGE: "Hameçonnage ou arnaque",
+    AUTRE: "Autre motif",
+  };
+  const signalement = { confirmation: false, envoi: false, envoye: false };
+
+  function afficherSignalement(visible) {
+    $("signalement").hidden = !visible;
+    if (!visible) fermerSignalement(false);
+  }
+
+  function reinitialiserConfirmation() {
+    signalement.confirmation = false;
+    $("confirmation-signalement").textContent = "";
+    $("bouton-envoyer-signalement").textContent = "Envoyer";
+    $("bouton-annuler-signalement").textContent = "Annuler";
+  }
+
+  function fermerSignalement(rendreFocus) {
+    $("panneau-signalement").hidden = true;
+    $("bouton-signaler").setAttribute("aria-expanded", "false");
+    reinitialiserConfirmation();
+    if (rendreFocus) $("bouton-signaler").focus();
+  }
+
+  function erreurSignalement(message, champ) {
+    const erreur = $("erreur-signalement");
+    erreur.textContent = message;
+    erreur.hidden = false;
+    if (champ) {
+      champ.setAttribute("aria-invalid", "true");
+      champ.focus();
+    }
+  }
+
+  function messageErreurSignalement(e) {
+    if (!(e instanceof ErreurLien)) return "Le signalement n'a pas pu être envoyé. Réessayez.";
+    if (e.statut === 410 || e.statut === 404) return "Ce lien n'est plus disponible (expiré, révoqué ou désactivé) : il ne peut plus être signalé.";
+    if (e.statut === 429) return "Vous avez envoyé trop de signalements depuis votre connexion. Réessayez dans une heure.";
+    if (e.statut === 422 || e.statut === 400) return "Le signalement est incomplet : vérifiez le motif et la longueur du commentaire.";
+    return e.message;
+  }
+
+  function initialiserSignalement() {
+    const bouton = $("bouton-signaler");
+    const panneau = $("panneau-signalement");
+    const form = $("form-signalement");
+    const motif = $("champ-motif");
+    const commentaire = $("champ-commentaire");
+    const envoyer = $("bouton-envoyer-signalement");
+
+    bouton.addEventListener("click", () => {
+      if (!panneau.hidden) { fermerSignalement(true); return; }
+      panneau.hidden = false;
+      bouton.setAttribute("aria-expanded", "true");
+      if (signalement.envoye) $("merci-signalement").focus();
+      else motif.focus();
+    });
+    $("bouton-annuler-signalement").addEventListener("click", () => {
+      if (signalement.confirmation) { reinitialiserConfirmation(); motif.focus(); }
+      else fermerSignalement(true);
+    });
+    panneau.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") { ev.preventDefault(); fermerSignalement(true); }
+    });
+    for (const champ of [motif, commentaire]) {
+      champ.addEventListener("input", () => {
+        champ.removeAttribute("aria-invalid");
+        $("erreur-signalement").hidden = true;
+        if (signalement.confirmation) reinitialiserConfirmation();
+      });
+    }
+
+    form.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      if (signalement.envoi) return;
+      $("erreur-signalement").hidden = true;
+      if (!MOTIFS[motif.value]) {
+        erreurSignalement("Choisissez un motif de signalement.", motif);
+        return;
+      }
+      if (commentaire.value.length > 2000) {
+        erreurSignalement("Le commentaire dépasse 2 000 caractères.", commentaire);
+        return;
+      }
+      if (!signalement.confirmation) {
+        // Première étape : demander confirmation avant l'envoi.
+        signalement.confirmation = true;
+        const conf = $("confirmation-signalement");
+        conf.textContent = "Signaler ce lien pour le motif « " + MOTIFS[motif.value] + " » ? Le signalement sera transmis à notre équipe de modération.";
+        envoyer.textContent = "Confirmer l'envoi";
+        $("bouton-annuler-signalement").textContent = "Modifier";
+        envoyer.focus();
+        return;
+      }
+      signalement.envoi = true;
+      envoyer.disabled = true;
+      envoyer.textContent = "Envoi…";
+      try {
+        const corps = { motif: motif.value };
+        const texte = commentaire.value.trim();
+        if (texte) corps.commentaire = texte;
+        await appelApi("/public/liens/" + encodeURIComponent(etat.jeton) + "/signalements", { method: "POST", corps });
+        signalement.envoye = true;
+        form.hidden = true;
+        bouton.textContent = "Signalement envoyé";
+        const merci = $("merci-signalement");
+        merci.hidden = false;
+        merci.focus();
+      } catch (e) {
+        erreurSignalement(messageErreurSignalement(e), null);
+        reinitialiserConfirmation();
+        envoyer.focus();
+      } finally {
+        signalement.envoi = false;
+        envoyer.disabled = false;
+        if (!signalement.envoye && !signalement.confirmation) envoyer.textContent = "Envoyer";
+      }
+    });
+  }
+
   // --- Démarrage ------------------------------------------------------------------------------
 
   async function demarrer() {
     for (const id of ["lien-accueil", "lien-accueil-pied"]) $(id).href = CONFIG.accueilUrl || "/";
     $("bouton-actualiser").addEventListener("click", () => actualiser(false));
+    initialiserSignalement();
     etat.jeton = lireJeton();
     if (!etat.jeton) {
       afficherErreur("Lien introuvable", "Cette adresse ne contient pas de lien de partage valide. Vérifiez que vous avez copié le lien en entier.");

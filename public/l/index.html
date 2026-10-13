@@ -48,6 +48,36 @@
       <span class="texte-doux" id="maj-texte">Contenu en direct : vous voyez sa dernière version.</span>
       <button type="button" class="bouton bouton-secondaire" id="bouton-actualiser">Actualiser</button>
     </div>
+
+    <!-- UC-I20 : signaler un lien public (contrat 2.10, POST /public/liens/{jeton}/signalements). -->
+    <section id="signalement" class="signalement" hidden aria-label="Signalement">
+      <button type="button" class="bouton-discret" id="bouton-signaler" aria-expanded="false" aria-controls="panneau-signalement">Signaler ce contenu</button>
+      <div id="panneau-signalement" class="carte panneau-signalement" hidden>
+        <h2 class="titre-section" id="titre-signalement">Signaler ce contenu</h2>
+        <p class="texte-doux">Ce contenu vous semble illicite ou dangereux&nbsp;? Notre équipe examinera ce lien. Le contenu étant chiffré, elle ne voit que le lien et votre signalement.</p>
+        <form id="form-signalement" novalidate aria-labelledby="titre-signalement">
+          <label for="champ-motif">Motif</label>
+          <select id="champ-motif" name="motif" required aria-describedby="erreur-signalement">
+            <option value="">Choisissez un motif…</option>
+            <option value="CONTENU_ILLICITE">Contenu illicite</option>
+            <option value="ATTEINTE_DROIT_AUTEUR">Atteinte au droit d'auteur</option>
+            <option value="LOGICIEL_MALVEILLANT">Logiciel malveillant ou virus</option>
+            <option value="HAMECONNAGE">Hameçonnage ou arnaque</option>
+            <option value="AUTRE">Autre motif</option>
+          </select>
+          <label for="champ-commentaire">Commentaire <span class="texte-doux">(facultatif)</span></label>
+          <textarea id="champ-commentaire" name="commentaire" rows="4" maxlength="2000" aria-describedby="aide-commentaire"></textarea>
+          <p id="aide-commentaire" class="meta">2&nbsp;000 caractères au maximum. N'y indiquez pas d'informations personnelles inutiles.</p>
+          <p id="confirmation-signalement" class="confirmation" aria-live="polite"></p>
+          <div class="ligne-actions">
+            <button type="submit" class="bouton bouton-principal" id="bouton-envoyer-signalement">Envoyer</button>
+            <button type="button" class="bouton bouton-secondaire" id="bouton-annuler-signalement">Annuler</button>
+          </div>
+          <p id="erreur-signalement" class="erreur" role="alert" hidden></p>
+        </form>
+        <p id="merci-signalement" class="merci" role="status" tabindex="-1" hidden>Merci, notre équipe va examiner ce lien.</p>
+      </div>
+    </section>
   </main>
 
   <footer class="pied">
