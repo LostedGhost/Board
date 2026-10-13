@@ -54,7 +54,7 @@ services:
       - key: BREVO_API_KEY
         sync: false
       - key: DEFAULT_FROM_EMAIL
-        value: "LuluBoard <lucioteaching@gmail.com>"
+        value: "Lulu <contact@graciotopanou.online>"  # expéditeur vérifié dans Brevo (domaine authentifié)
       - key: SUPPORT_EMAIL
         value: "lucioteaching@gmail.com"
 
