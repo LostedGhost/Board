@@ -125,9 +125,14 @@ class ThemeLulu {
         unselectedLabelTextStyle: TextStyle(fontFamily: Lulu.police, color: texteDoux, fontSize: 12),
       ),
 
+      // Barre d'onglets mobile : 4 onglets, libellés toujours visibles, pastille arrondie aérée.
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: sombre ? Lulu.navigation : surface,
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        height: 68,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        indicatorShape: const StadiumBorder(),
         indicatorColor: accent.withValues(alpha: 0.18),
         iconTheme: WidgetStateProperty.resolveWith(
           (s) => IconThemeData(color: s.contains(WidgetState.selected) ? accent : texteDoux),

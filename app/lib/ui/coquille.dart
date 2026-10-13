@@ -36,16 +36,56 @@ class Section {
 }
 
 final sections = <Section>[
-  Section('Presse-papier', Icons.content_paste_outlined, Icons.content_paste, () => const EcranPressePapier(),
-      cible: DestinationDepot.pressePapier),
+  Section(
+    'Presse-papier',
+    Icons.content_paste_outlined,
+    Icons.content_paste,
+    () => const EcranPressePapier(),
+    cible: DestinationDepot.pressePapier,
+  ),
   Section('Post-it', Icons.sticky_note_2_outlined, Icons.sticky_note_2, () => const EcranPostIt(), cible: DestinationDepot.postIt),
   Section('Tâches', Icons.checklist_outlined, Icons.checklist, () => const EcranTaches(), cible: DestinationDepot.taches),
   Section('Snippets', Icons.code_outlined, Icons.code, () => const EcranSnippets(), cible: DestinationDepot.snippets),
   Section('Fichiers', Icons.folder_outlined, Icons.folder, () => const EcranFichiers(), compteRequis: true),
-  Section('Envois', Icons.send_to_mobile_outlined, Icons.send_to_mobile, () => const EcranEnvois(),
-      compteRequis: true, cible: DestinationDepot.envois),
+  Section(
+    'Envois',
+    Icons.send_to_mobile_outlined,
+    Icons.send_to_mobile,
+    () => const EcranEnvois(),
+    compteRequis: true,
+    cible: DestinationDepot.envois,
+  ),
   Section('Réglages', Icons.settings_outlined, Icons.settings, () => const EcranReglages()),
 ];
+
+/// Navigation mobile : 4 onglets au lieu de 7. Les sections proches sont regroupées
+/// (bascule en haut de l'écran) et les réglages passent dans la barre du haut.
+class GroupeNav {
+  const GroupeNav(this.titre, this.icone, this.iconeActive, this.sections);
+
+  final String titre;
+  final IconData icone;
+  final IconData iconeActive;
+
+  /// Index dans [sections].
+  final List<int> sections;
+}
+
+const indexReglages = 6;
+
+const groupesMobile = <GroupeNav>[
+  GroupeNav('Presse-papier', Icons.content_paste_outlined, Icons.content_paste, [0]),
+  GroupeNav('Notes', Icons.sticky_note_2_outlined, Icons.sticky_note_2, [1, 3]),
+  GroupeNav('Tâches', Icons.task_alt_outlined, Icons.task_alt, [2]),
+  GroupeNav('Partage', Icons.devices_outlined, Icons.devices, [4, 5]),
+];
+
+int? groupeDe(int section) {
+  for (final (g, groupe) in groupesMobile.indexed) {
+    if (groupe.sections.contains(section)) return g;
+  }
+  return null;
+}
 
 /// Navigation principale : raccourcis clavier, recherche globale (G2) et état de synchro (I5).
 class Coquille extends StatefulWidget {
@@ -60,6 +100,9 @@ class Coquille extends StatefulWidget {
 
 class _CoquilleState extends State<Coquille> {
   int _index = 0;
+
+  /// Dernière section ouverte dans chaque groupe mobile (on y revient en touchant l'onglet).
+  final _derniereDuGroupe = [for (final g in groupesMobile) g.sections.first];
   StreamSubscription<Map<String, dynamic>>? _evenements;
   PlanificateurRappels? _rappels;
 
@@ -77,9 +120,32 @@ class _CoquilleState extends State<Coquille> {
     if (mounted) CaptureRapide.ouvrir(context);
   }
 
+  bool get _large => MediaQuery.sizeOf(context).width >= 760;
+
+  /// Ouvre une section ; sur mobile, les réglages s'ouvrent en page à part (hors barre d'onglets).
+  void _ouvrir(int i) {
+    if (!mounted) return;
+    if (i == indexReglages && !_large) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => Scaffold(
+            appBar: AppBar(title: const Text('Réglages')),
+            body: sections[i].construire(),
+          ),
+        ),
+      );
+      return;
+    }
+    final g = groupeDe(i);
+    setState(() {
+      _index = i;
+      if (g != null) _derniereDuGroupe[g] = i;
+    });
+  }
+
   void _surSectionDemandee() {
     final i = Coquille.sectionDemandee.value;
-    if (i != null && mounted) setState(() => _index = i);
+    if (i != null) _ouvrir(i);
     Coquille.sectionDemandee.value = null;
   }
 
@@ -87,14 +153,23 @@ class _CoquilleState extends State<Coquille> {
     if (!mounted) return;
     switch (ev['type']) {
       case 'envoi_recu':
-        afficherMessage(context, 'Nouvel élément reçu d\'un de vos appareils.',
-            action: SnackBarAction(label: 'Voir', onPressed: () => setState(() => _index = 5)));
+        afficherMessage(
+          context,
+          'Nouvel élément reçu d\'un de vos appareils.',
+          action: SnackBarAction(label: 'Voir', onPressed: () => _ouvrir(5)),
+        );
       case 'deverrouillage_demande':
-        afficherMessage(context, 'Un nouvel appareil demande l\'accès à votre compte.',
-            action: SnackBarAction(label: 'Examiner', onPressed: () => setState(() => _index = 6)));
+        afficherMessage(
+          context,
+          'Un nouvel appareil demande l\'accès à votre compte.',
+          action: SnackBarAction(label: 'Examiner', onPressed: () => _ouvrir(indexReglages)),
+        );
       case 'conflit':
-        afficherMessage(context, 'Une modification faite hors ligne a été remplacée par une plus récente. '
-            'L\'ancienne version reste dans l\'historique du post-it.');
+        afficherMessage(
+          context,
+          'Une modification faite hors ligne a été remplacée par une plus récente. '
+          'L\'ancienne version reste dans l\'historique du post-it.',
+        );
     }
   }
 
@@ -110,20 +185,41 @@ class _CoquilleState extends State<Coquille> {
   /// Icône de destination servant aussi de cible de dépôt (H5).
   Widget _icone(int i, {required bool active}) {
     final s = sections[i];
-    return CibleDepot(
-      destination: s.cible,
-      onOuvrir: () {
-        if (mounted) setState(() => _index = i);
-      },
-      child: Icon(active ? s.iconeActive : s.icone),
+    return CibleDepot(destination: s.cible, onOuvrir: () => _ouvrir(i), child: Icon(active ? s.iconeActive : s.icone));
+  }
+
+  /// Bascule entre les sections d'un groupe mobile (ex. Post-it | Snippets).
+  PreferredSizeWidget? _bascule(GroupeNav? groupe) {
+    if (groupe == null || groupe.sections.length < 2) return null;
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(52),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Lulu.md, 0, Lulu.md, Lulu.sm + 2),
+        child: SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<int>(
+            showSelectedIcon: false,
+            segments: [
+              for (final i in groupe.sections)
+                ButtonSegment(value: i, label: Text(sections[i].titre), icon: Icon(sections[i].icone, size: 18)),
+            ],
+            selected: {_index},
+            onSelectionChanged: (choix) => _ouvrir(choix.first),
+          ),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final noyau = context.noyau;
-    final large = MediaQuery.sizeOf(context).width >= 760;
+    final large = _large;
+    // Les réglages ne sont pas un onglet mobile : si l'écran rétrécit, on revient au premier onglet.
+    if (!large && _index == indexReglages) _index = 0;
     final section = sections[_index];
+    final groupeMobile = large ? null : groupeDe(_index);
+    final groupe = groupeMobile == null ? null : groupesMobile[groupeMobile];
     final contenu = ListenableBuilder(
       listenable: noyau.compte,
       builder: (context, _) {
@@ -132,7 +228,8 @@ class _CoquilleState extends State<Coquille> {
           return EtatVide(
             icone: section.iconeActive,
             titre: '${section.titre} : réservé aux comptes',
-            texte: 'Créez un compte gratuit pour envoyer des fichiers et partager entre vos appareils. '
+            texte:
+                'Créez un compte gratuit pour envoyer des fichiers et partager entre vos appareils. '
                 'Vos données locales seront conservées.',
             action: FilledButton(onPressed: () => ouvrirInscription(context), child: const Text('Créer un compte')),
           );
@@ -143,20 +240,20 @@ class _CoquilleState extends State<Coquille> {
 
     final scaffold = Scaffold(
       appBar: AppBar(
-        title: Text(section.titre),
+        title: Text(groupe?.titre ?? section.titre),
+        bottom: _bascule(groupe),
         actions: [
-          IconButton(
-            tooltip: 'Capture rapide (Ctrl+Alt+N)',
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: () => CaptureRapide.ouvrir(context),
-          ),
-          IconButton(
-            tooltip: 'Rechercher partout (Ctrl+K)',
-            icon: const Icon(Icons.search),
-            onPressed: () => ouvrirRecherche(context),
-          ),
+          // Sur mobile, chaque écran a son propre bouton « Ajouter » : la capture rapide reste au bureau.
+          if (large)
+            IconButton(
+              tooltip: 'Capture rapide (Ctrl+Alt+N)',
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () => CaptureRapide.ouvrir(context),
+            ),
+          IconButton(tooltip: 'Rechercher partout (Ctrl+K)', icon: const Icon(Icons.search), onPressed: () => ouvrirRecherche(context)),
           const IndicateurSynchro(),
-          const SizedBox(width: 8),
+          if (!large) IconButton(tooltip: 'Réglages', icon: const Icon(Icons.settings_outlined), onPressed: () => _ouvrir(indexReglages)),
+          const SizedBox(width: Lulu.xs),
         ],
       ),
       body: Column(
@@ -169,18 +266,27 @@ class _CoquilleState extends State<Coquille> {
       ),
       bottomNavigationBar: large
           ? null
-          : NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-              destinations: [
-                for (final (i, s) in sections.indexed)
-                  NavigationDestination(
-                    icon: _icone(i, active: false),
-                    selectedIcon: _icone(i, active: true),
-                    label: s.titre,
-                  ),
-              ],
+          : DecoratedBox(
+              // Fine séparation plutôt qu'une ombre : la barre reste légère.
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+              ),
+              child: NavigationBar(
+                selectedIndex: groupeMobile ?? 0,
+                onDestinationSelected: (g) => _ouvrir(_derniereDuGroupe[g]),
+                destinations: [
+                  for (final g in groupesMobile)
+                    NavigationDestination(
+                      icon: CibleDepot(
+                        destination: sections[g.sections.first].cible,
+                        onOuvrir: () => _ouvrir(g.sections.first),
+                        child: Icon(g.icone),
+                      ),
+                      selectedIcon: Icon(g.iconeActive),
+                      label: g.titre,
+                    ),
+                ],
+              ),
             ),
     );
 
@@ -197,28 +303,32 @@ class _CoquilleState extends State<Coquille> {
       children: [
         NavigationRail(
           selectedIndex: _index,
-          onDestinationSelected: (i) => setState(() => _index = i),
+          onDestinationSelected: _ouvrir,
           labelType: NavigationRailLabelType.all,
           leading: Padding(
             padding: const EdgeInsets.symmetric(vertical: Lulu.sm + 4),
             child: Semantics(
               label: 'LuluBoard',
               child: ExcludeSemantics(
-                child: Column(children: [
-                  Icon(Icons.dashboard_customize, size: 28, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(height: Lulu.xs),
-                  Text('Lulu', style: TextStyle(fontFamily: Lulu.policeMarque, fontSize: 18, color: Theme.of(context).colorScheme.primary)),
-                ]),
+                child: Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(Lulu.rMd),
+                      child: Image.asset('assets/logo/logo.png', width: 36, height: 36, filterQuality: FilterQuality.medium),
+                    ),
+                    const SizedBox(height: Lulu.xs),
+                    Text(
+                      'Lulu',
+                      style: TextStyle(fontFamily: Lulu.policeMarque, fontSize: 18, color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
           destinations: [
             for (final (i, s) in sections.indexed)
-              NavigationRailDestination(
-                icon: _icone(i, active: false),
-                selectedIcon: _icone(i, active: true),
-                label: Text(s.titre),
-              ),
+              NavigationRailDestination(icon: _icone(i, active: false), selectedIcon: _icone(i, active: true), label: Text(s.titre)),
           ],
         ),
         const VerticalDivider(width: 1),
@@ -266,10 +376,31 @@ class BandeauVisiteur extends StatelessWidget {
       listenable: compte,
       builder: (context, _) {
         if (compte.etat.mode != ModeSession.visiteur) return const SizedBox.shrink();
+        if (MediaQuery.sizeOf(context).width < 760) {
+          // Mobile : une seule ligne discrète, pour laisser la place au contenu.
+          final couleurs = Theme.of(context).colorScheme;
+          return Material(
+            color: couleurs.surfaceContainerHighest,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(Lulu.md, Lulu.xs, Lulu.sm, Lulu.xs),
+              child: Row(children: [
+                Icon(Icons.phonelink_lock, size: 18, color: couleurs.onSurfaceVariant),
+                const SizedBox(width: Lulu.sm),
+                Expanded(
+                  child: Text('Mode local (cet appareil)',
+                      style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
+                ),
+                TextButton(onPressed: () => ouvrirInscription(context), child: const Text('Créer un compte')),
+              ]),
+            ),
+          );
+        }
         return MaterialBanner(
           leading: const Icon(Icons.info_outline),
-          content: const Text('Mode local : vos données restent sur cet appareil. '
-              'Créez un compte pour les retrouver partout, chiffrées de bout en bout.'),
+          content: const Text(
+            'Mode local : vos données restent sur cet appareil. '
+            'Créez un compte pour les retrouver partout, chiffrées de bout en bout.',
+          ),
           actions: [
             TextButton(onPressed: () => ouvrirConnexion(context), child: const Text('Se connecter')),
             FilledButton.tonal(onPressed: () => ouvrirInscription(context), child: const Text('Créer un compte')),
@@ -294,11 +425,11 @@ class BandeauCleRecuperation extends StatelessWidget {
         if (e.mode != ModeSession.actif || !e.cleRecuperationAConfirmer) return const SizedBox.shrink();
         return MaterialBanner(
           leading: const Icon(Icons.key),
-          content: const Text('Sauvegardez votre clé de récupération : sans elle, vos données sont perdues '
-              'si vous oubliez votre mot de passe et perdez vos appareils.'),
-          actions: [
-            TextButton(onPressed: () => ouvrirRegenerationCle(context), child: const Text('Obtenir ma clé')),
-          ],
+          content: const Text(
+            'Sauvegardez votre clé de récupération : sans elle, vos données sont perdues '
+            'si vous oubliez votre mot de passe et perdez vos appareils.',
+          ),
+          actions: [TextButton(onPressed: () => ouvrirRegenerationCle(context), child: const Text('Obtenir ma clé'))],
         );
       },
     );

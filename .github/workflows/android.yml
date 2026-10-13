@@ -10,6 +10,8 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # publication de la release « apk-latest »
     defaults:
       run:
         working-directory: app
@@ -37,3 +39,15 @@ jobs:
           name: luluboard-apk
           path: app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      # Lien de téléchargement stable : release « apk-latest », remplacée à chaque build.
+      - name: Publier la release apk-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk luluboard.apk
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest luluboard.apk \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "LuluBoard Android (dernière build)" \
+            --notes "APK construit depuis ${GITHUB_REF_NAME} (${GITHUB_SHA::7})."

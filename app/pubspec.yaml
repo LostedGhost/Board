@@ -108,6 +108,7 @@ flutter:
   assets:
     - assets/icone_tray.ico
     - assets/icone_tray.png
+    - assets/logo/logo.png
     - assets/fonts/OFL-Rubik.txt
     - assets/fonts/OFL-Itim.txt
 
