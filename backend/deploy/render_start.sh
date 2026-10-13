@@ -2,6 +2,7 @@
 # Démarrage du service web sur Render (voir ../../render.yaml).
 # Les migrations passent au démarrage : l'offre gratuite n'a pas d'étape « pre-deploy ».
 set -euo pipefail
+uv run --no-sync python deploy/verifier_env.py
 uv run --no-sync python manage.py migrate --noinput
 
 # Premier administrateur pour /admin/, créé une seule fois à partir de DJANGO_SUPERUSER_EMAIL/PASSWORD.
