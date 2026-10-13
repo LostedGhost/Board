@@ -18,6 +18,7 @@ __pycache__/
 *.egg-info/
 .venv/
 .env
+staticfiles/
 backend/scripts/
 *.log
 hs_err_pid*.log

@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qsl, unquote, urlparse
 
 from dotenv import load_dotenv
 
@@ -23,6 +24,10 @@ def env_bool(nom, defaut=False):
 SECRET_KEY = env("DJANGO_SECRET_KEY", obligatoire=True)
 DEBUG = env_bool("DJANGO_DEBUG")
 ALLOWED_HOSTS = [h.strip() for h in env("DJANGO_ALLOWED_HOSTS", "localhost").split(",") if h.strip()]
+# Render fournit le nom d'hôte public du service : il est accepté sans configuration supplémentaire.
+RENDER_EXTERNAL_HOSTNAME = env("RENDER_EXTERNAL_HOSTNAME", "")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 VERSION_API = "0.1.0"
 MIN_APP_VERSION = env("MIN_APP_VERSION", "0.1.0")
@@ -59,6 +64,7 @@ MIDDLEWARE = [
     "commun.version_app.VersionAppMiddleware",
     "commun.taille.TailleRequeteMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -97,6 +103,22 @@ DATABASES = {
         "OPTIONS": {"connect_timeout": 5},
     }
 }
+
+# En production, une URL unique (Render, Neon…) remplace les DATABASE_* séparées.
+# Les paramètres de requête (ex. sslmode=require chez Neon) sont transmis à psycopg.
+DATABASE_URL = env("DATABASE_URL", "")
+if DATABASE_URL:
+    url = urlparse(DATABASE_URL)
+    DATABASES["default"].update(
+        {
+            "NAME": unquote(url.path.lstrip("/")),
+            "USER": unquote(url.username or ""),
+            "PASSWORD": unquote(url.password or ""),
+            "HOST": url.hostname or "",
+            "PORT": str(url.port or 5432),
+        }
+    )
+    DATABASES["default"]["OPTIONS"].update(dict(parse_qsl(url.query)))
 
 REDIS_URL = env("REDIS_URL", "redis://localhost:6379/0")
 
@@ -201,6 +223,11 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"  # rempli par collectstatic, servi par WhiteNoise
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGGING = {
@@ -227,3 +254,5 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in env("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+    if RENDER_EXTERNAL_HOSTNAME:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")

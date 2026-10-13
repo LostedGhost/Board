@@ -198,3 +198,12 @@ Lancer un worker en production : `uv run celery -A config worker -l info` (et `b
 | Inactivité (avertissement à 12 mois, suppression 30 jours plus tard) ; comptes jamais vérifiés depuis 7 jours | 24 h |
 
 `uv run celery -A config worker -l info` et `uv run celery -A config beat -l info`.
+
+## Déploiement (Render)
+
+Le Blueprint `../render.yaml` crée l'API (`luluboard-api`), PostgreSQL (`luluboard-db`), Redis (`luluboard-redis`) et le site public (`luluboard-site`).
+Création : dashboard Render → *New* → *Blueprint* → dépôt `LostedGhost/Board` ; les secrets marqués `sync: false` sont demandés à ce moment-là.
+
+- Build : `deploy/render_build.sh` (`uv sync`, `collectstatic`).
+- Démarrage : `deploy/render_start.sh` (migrations, premier administrateur, worker Celery + beat en arrière-plan, uvicorn).
+- Base de données : `DATABASE_URL` est prioritaire sur les `DATABASE_*`. Pour passer sur Neon, remplacer sa valeur par l'URL Neon (avec `?sslmode=require`).

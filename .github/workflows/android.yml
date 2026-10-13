@@ -29,7 +29,8 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build apk --release
+      # Adresse de l'API compilée dans l'app (variable de dépôt API_URL, sinon le service Render par défaut).
+      - run: flutter build apk --release --dart-define=API_URL=${{ vars.API_URL || 'https://luluboard-api.onrender.com' }}
 
       - uses: actions/upload-artifact@v4
         with:

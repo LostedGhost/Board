@@ -1,0 +1,87 @@
+# Blueprint Render de LuluBoard : API Django, PostgreSQL, Redis et site public.
+# Création : dashboard Render → New → Blueprint → dépôt LostedGhost/Board.
+# Les variables « sync: false » sont demandées à la création du Blueprint (secrets jamais versionnés).
+
+services:
+  - type: web
+    name: luluboard-api
+    runtime: python
+    region: frankfurt
+    plan: free
+    rootDir: backend
+    buildCommand: ./deploy/render_build.sh
+    startCommand: ./deploy/render_start.sh
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.7"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      # Plus tard : remplacer par l'URL Neon (avec ?sslmode=require), sans autre changement de code.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: luluboard-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: luluboard-redis
+          property: connectionString
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "true"
+      - key: MIN_APP_VERSION
+        value: "0.1.0"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://luluboard-site.onrender.com"
+      # Premier administrateur de /admin/ (créé au premier démarrage).
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+      - key: DJANGO_SUPERUSER_NOM_AFFICHAGE
+        value: "Admin"
+      # Stockage des fichiers (ADR-006) : Telegram en direct.
+      - key: FILES_USE_DIRECT_TELEGRAM
+        value: "true"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHANNEL_ID
+        sync: false
+      # E-mails (codes de vérification) : SMTP.
+      - key: EMAIL_BACKEND
+        value: "django.core.mail.backends.smtp.EmailBackend"
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: SUPPORT_EMAIL
+        sync: false
+
+  - type: keyvalue
+    name: luluboard-redis
+    region: frankfurt
+    plan: free
+    ipAllowList: []  # accessible uniquement depuis les services Render
+
+  # Page d'accueil, pages légales et consultation des liens publics (public/).
+  - type: web
+    name: luluboard-site
+    runtime: static
+    rootDir: public
+    buildCommand: ""
+    staticPublishPath: .
+
+databases:
+  - name: luluboard-db
+    region: frankfurt
+    plan: free
+    databaseName: luluboard
+    user: luluboard
