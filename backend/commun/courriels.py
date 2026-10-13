@@ -3,6 +3,9 @@
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from rest_framework import status
+
+from commun.erreurs import ErreurApi
 
 
 def envoyer_courriel(
@@ -26,4 +29,13 @@ def envoyer_courriel(
         sujet, texte, settings.DEFAULT_FROM_EMAIL, [destinataire], reply_to=[reponse_a] if reponse_a else None
     )
     message.attach_alternative(html, "text/html")
-    return message.send(fail_silently=fail_silently)
+    if fail_silently:
+        return message.send(fail_silently=True)
+    try:
+        return message.send()
+    except Exception as exc:  # fournisseur injoignable ou refus : détail dans les logs (commun.brevo)
+        raise ErreurApi(
+            "envoi_email_impossible",
+            "Impossible d'envoyer l'e-mail pour le moment. Réessayez dans quelques minutes.",
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+        ) from exc

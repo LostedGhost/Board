@@ -10,6 +10,7 @@ from apps.comptes.emails import envoyer_code
 from apps.comptes.models import TypeCode
 from commun.brevo import URL_API
 from commun.courriels import envoyer_courriel
+from commun.erreurs import ErreurApi
 
 
 def test_code_envoye_en_texte_et_en_html():
@@ -53,3 +54,13 @@ def test_backend_brevo_erreur(settings):
             m.send()
     with get_connection("commun.brevo.BrevoEmailBackend", fail_silently=True) as silencieuse:
         assert silencieuse.send_messages([m]) == 0
+
+
+def test_echec_envoi_devient_erreur_503(settings):
+    settings.EMAIL_BACKEND = "commun.brevo.BrevoEmailBackend"
+    settings.BREVO_API_KEY = "cle"
+    with respx.mock:
+        respx.post(URL_API).mock(return_value=httpx.Response(401, json={"message": "unrecognised IP address"}))
+        with pytest.raises(ErreurApi) as erreur:
+            envoyer_courriel("a@exemple.test", "Sujet", "Titre", ["Corps"])
+    assert erreur.value.status_code == 503 and erreur.value.code_erreur == "envoi_email_impossible"
