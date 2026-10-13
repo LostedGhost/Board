@@ -30,4 +30,5 @@ docs/openapi.yaml
 # Base de données locales
 *.db
 *.sqlite
-*.sqlite3livrables/
+*.sqlite3
+livrables/
