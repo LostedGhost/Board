@@ -48,7 +48,11 @@ class _DialogueRappelState extends State<_DialogueRappel> {
                         contentPadding: EdgeInsets.zero,
                         leading: Icon(r['actif'] == true ? Icons.alarm : Icons.alarm_off),
                         title: Text(dateCourte(r['prochaineEcheance'] as String?)),
-                        subtitle: Text(_recurrences[r['recurrence']] ?? ''),
+                        subtitle: Text(resumeRappel(
+                          DateTime.tryParse(r['prochaineEcheance'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+                          r['recurrence'] as String?,
+                          ((r['joursSemaine'] as List?) ?? const []).cast<String>(),
+                        )),
                         trailing: IconButton(
                           tooltip: 'Supprimer ce rappel',
                           icon: const Icon(Icons.close),
@@ -71,7 +75,7 @@ class _DialogueRappelState extends State<_DialogueRappel> {
                     onPressed: () async {
                       final d = await showDatePicker(
                         context: context,
-                        firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                        firstDate: DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
                         lastDate: DateTime.now().add(const Duration(days: 3650)),
                         initialDate: _date,
                       );
@@ -99,6 +103,11 @@ class _DialogueRappelState extends State<_DialogueRappel> {
               items: [for (final e in _recurrences.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
               onChanged: (v) => setState(() => _recurrence = v),
             ),
+            const SizedBox(height: 8),
+            Text(resumeRappel(_date, _recurrence, _joursChoisis), style: Theme.of(context).textTheme.bodyMedium),
+            if (!_date.isAfter(DateTime.now()))
+              Text('Cette date est passée : choisissez une date et une heure à venir.',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
             if (_recurrence == 'HEBDOMADAIRE')
               Wrap(
                 spacing: 4,
@@ -117,7 +126,7 @@ class _DialogueRappelState extends State<_DialogueRappel> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer')),
         FilledButton(
-          onPressed: () async {
+          onPressed: !_date.isAfter(DateTime.now()) ? null : () async {
             await depot.creerRappel(widget.elementId, _date,
                 recurrence: _recurrence, jours: _joursChoisis.toList(), fuseau: _fuseauLocal());
             if (context.mounted) afficherMessage(context, 'Rappel ajouté.');
@@ -137,4 +146,27 @@ String _fuseauLocal() {
   if (h == 0) return 'UTC';
   // Les zones « Etc/GMT » ont un signe inversé par convention POSIX.
   return 'Etc/GMT${h > 0 ? '-' : '+'}${h.abs()}';
+}
+
+const _nomsJours = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+const _mois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+/// Résumé lisible : « Tous les lundis à 09:00 », « Le 14 octobre 2026 à 18:30 »…
+String resumeRappel(DateTime d, String? recurrence, Iterable<String> jours) {
+  final h = '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  switch (recurrence) {
+    case 'QUOTIDIENNE':
+      return 'Tous les jours à $h';
+    case 'HEBDOMADAIRE':
+      final noms = [for (var i = 0; i < 7; i++) if (jours.contains(_jours[i])) '${_nomsJours[i]}s'];
+      if (noms.isEmpty) noms.add('${_nomsJours[d.weekday - 1]}s');
+      final liste = noms.length == 1 ? noms.first : '${noms.sublist(0, noms.length - 1).join(', ')} et ${noms.last}';
+      return 'Tous les $liste à $h';
+    case 'MENSUELLE':
+      return 'Tous les mois, le ${d.day == 1 ? '1er' : d.day}, à $h';
+    case 'ANNUELLE':
+      return 'Tous les ans, le ${d.day == 1 ? '1er' : d.day} ${_mois[d.month - 1]}, à $h';
+    default:
+      return 'Le ${_nomsJours[d.weekday - 1]} ${d.day} ${_mois[d.month - 1]} ${d.year} à $h';
+  }
 }

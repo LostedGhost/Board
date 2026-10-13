@@ -1,21 +1,44 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-/// Système de design LuluBoard — palette LuluFiles.
-///
-/// Mode sombre  : fond #020617, surfaces #0F172A / #1E293B, accent vert #22C55E.
-/// Mode clair   : fond blanc/gris très clair, accent vert #16A34A (contraste AA).
-/// Typographie  : Rubik (disponible sur toutes les plateformes via Google Fonts
-///                dans pubspec.yaml) avec fallback system-ui.
+/// Jetons du système de design LuluBoard (palette LuluFiles), partagés avec `public/index.html`.
+class Lulu {
+  // Couleurs — mode sombre (identiques aux variables CSS de la page d'accueil).
+  static const fond = Color(0xFF020617); // --bg
+  static const surface = Color(0xFF0F172A); // --primary
+  static const surfaceHaute = Color(0xFF1E293B); // --secondary
+  static const navigation = Color(0xFF0B0E1A);
+  static const bordure = Color(0xFF334155); // --border
+  static const texte = Color(0xFFF8FAFC); // --fg
+  static const texteDoux = Color(0xFF94A3B8); // --text-soft
+  static const texteEteint = Color(0xFF64748B); // --text-dim
+  static const accent = Color(0xFF22C55E); // --accent
+
+  // Couleurs — mode clair (ardoise, accent vert assombri pour rester lisible sur blanc).
+  static const fondClair = Color(0xFFF8FAFC);
+  static const surfaceClaire = Color(0xFFFFFFFF);
+  static const surfaceHauteClaire = Color(0xFFF1F5F9);
+  static const bordureClaire = Color(0xFFE2E8F0);
+  static const texteClair = Color(0xFF0F172A);
+  static const texteDouxClair = Color(0xFF475569);
+  static const accentClair = Color(0xFF15803D); // contraste 5:1 sur blanc (AA)
+
+  // Espacements (--sp-*) et rayons (--r-*).
+  static const xs = 4.0, sm = 8.0, md = 16.0, lg = 24.0, xl = 32.0;
+  static const rSm = 6.0, rMd = 8.0, rLg = 12.0, rXl = 16.0;
+
+  // Durées (--t-*).
+  static const rapide = Duration(milliseconds: 150);
+  static const normal = Duration(milliseconds: 200);
+
+  // Polices embarquées (assets/fonts, licence OFL) : aucune requête vers Google au démarrage,
+  // l'app reste identique hors ligne et l'adresse IP des utilisateurs n'est pas transmise.
+  static const police = 'Rubik';
+  static const policeMarque = 'Itim';
+}
+
 class ThemeLulu {
-  /// Vert LuluFiles — utilisé comme couleur d'accent en mode sombre.
-  static const accentSombre = Color(0xFF22C55E);
-
-  /// Vert LuluFiles atténué — utilisé en mode clair (meilleur contraste sur blanc).
-  static const accentClair = Color(0xFF16A34A);
-
   /// Les 6 couleurs de post-it par défaut (C1).
   static const couleursPostIt = <String>[
     '#FFE066', '#FFADAD', '#A0E7E5', '#B4F8C8', '#CDB4DB', '#FFFFFF',
@@ -25,132 +48,227 @@ class ThemeLulu {
   static ThemeData sombre() => _theme(Brightness.dark);
 
   static ThemeData _theme(Brightness b) {
-    final isDark = b == Brightness.dark;
-    final seed = isDark ? accentSombre : accentClair;
+    final sombre = b == Brightness.dark;
+    final accent = sombre ? Lulu.accent : Lulu.accentClair;
+    // Texte sur l'accent : foncé sur le vert vif (≈ 9:1), blanc sur le vert assombri (≈ 5:1).
+    final surAccent = sombre ? Lulu.fond : Colors.white;
+    final fond = sombre ? Lulu.fond : Lulu.fondClair;
+    final surface = sombre ? Lulu.surface : Lulu.surfaceClaire;
+    final surfaceHaute = sombre ? Lulu.surfaceHaute : Lulu.surfaceHauteClaire;
+    final bordure = sombre ? Lulu.bordure : Lulu.bordureClaire;
+    final texte = sombre ? Lulu.texte : Lulu.texteClair;
+    final texteDoux = sombre ? Lulu.texteDoux : Lulu.texteDouxClair;
 
-    // Construction du ColorScheme Material 3 à partir de la graine LuluFiles.
-    final schema = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: b,
-      // En mode sombre, on force les surfaces vers la palette #020617 / #0F172A.
-      surface:     isDark ? const Color(0xFF0F172A) : null,
-      surfaceContainerHighest: isDark ? const Color(0xFF1E293B) : null,
+    final schema = ColorScheme.fromSeed(seedColor: accent, brightness: b).copyWith(
+      primary: accent,
+      onPrimary: surAccent,
+      surface: surface,
+      onSurface: texte,
+      onSurfaceVariant: texteDoux,
+      surfaceContainerLowest: fond,
+      surfaceContainerLow: surface,
+      surfaceContainer: surface,
+      surfaceContainerHigh: surfaceHaute,
+      surfaceContainerHighest: surfaceHaute,
+      outline: bordure,
+      outlineVariant: bordure.withValues(alpha: 0.6),
     );
 
-    return ThemeData(
-      colorScheme: schema,
-      useMaterial3: true,
-      fontFamily: GoogleFonts.rubik().fontFamily,
-      visualDensity: VisualDensity.standard,
+    final rayonMd = BorderRadius.circular(Lulu.rMd);
+    final rayonLg = BorderRadius.circular(Lulu.rLg);
+    final base = ThemeData(brightness: b, fontFamily: Lulu.police);
+    final textes = base.textTheme
+        .copyWith(
+          displayLarge: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1.5),
+          displayMedium: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: -1),
+          displaySmall: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+          headlineLarge: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+          headlineMedium: const TextStyle(fontWeight: FontWeight.w600, letterSpacing: -0.3),
+          headlineSmall: const TextStyle(fontWeight: FontWeight.w600),
+          titleLarge: const TextStyle(fontWeight: FontWeight.w600),
+          titleMedium: const TextStyle(fontWeight: FontWeight.w500),
+          titleSmall: const TextStyle(fontWeight: FontWeight.w500),
+          labelLarge: const TextStyle(fontWeight: FontWeight.w600),
+          labelMedium: const TextStyle(fontWeight: FontWeight.w500),
+          labelSmall: const TextStyle(fontWeight: FontWeight.w500, letterSpacing: 0.5),
+        )
+        .apply(fontFamily: Lulu.police, bodyColor: texte, displayColor: texte);
 
-      // AppBar épurée : pas d'élévation, titre en Rubik medium.
+    return ThemeData(
+      useMaterial3: true,
+      brightness: b,
+      colorScheme: schema,
+      fontFamily: Lulu.police,
+      textTheme: textes,
+      scaffoldBackgroundColor: fond,
+      canvasColor: fond,
+      dividerColor: bordure,
+      visualDensity: VisualDensity.standard,
+      splashFactory: InkSparkle.splashFactory,
+
       appBarTheme: AppBarTheme(
         elevation: 0,
-        scrolledUnderElevation: 1,
-        backgroundColor: isDark ? const Color(0xFF0F172A) : schema.surface,
-        foregroundColor: isDark ? const Color(0xFFF8FAFC) : schema.onSurface,
-        titleTextStyle: GoogleFonts.rubik(
-          fontWeight: FontWeight.w500,
-          fontSize: 18,
-          letterSpacing: -0.3,
-          color: isDark ? const Color(0xFFF8FAFC) : schema.onSurface,
-        ),
+        scrolledUnderElevation: 0,
+        backgroundColor: fond,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: texte,
+        shape: Border(bottom: BorderSide(color: bordure.withValues(alpha: 0.6))),
+        titleTextStyle: TextStyle(fontFamily: Lulu.police, fontWeight: FontWeight.w600, fontSize: 18, letterSpacing: -0.3, color: texte),
       ),
 
-      // NavigationRail / NavigationBar : indicateur vert translucide.
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: isDark ? const Color(0xFF0B0E1A) : null,
-        indicatorColor: seed.withValues(alpha: 0.18),
-        selectedIconTheme: IconThemeData(color: seed),
-        selectedLabelTextStyle: GoogleFonts.rubik(fontWeight: FontWeight.w600, color: seed),
-        unselectedLabelTextStyle: GoogleFonts.rubik(
-          color: isDark ? const Color(0xFF94A3B8) : schema.onSurfaceVariant,
-        ),
+        backgroundColor: sombre ? Lulu.navigation : surface,
+        indicatorColor: accent.withValues(alpha: 0.18),
+        selectedIconTheme: IconThemeData(color: accent),
+        unselectedIconTheme: IconThemeData(color: texteDoux),
+        selectedLabelTextStyle: TextStyle(fontFamily: Lulu.police, fontWeight: FontWeight.w600, color: accent, fontSize: 12),
+        unselectedLabelTextStyle: TextStyle(fontFamily: Lulu.police, color: texteDoux, fontSize: 12),
       ),
 
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: isDark ? const Color(0xFF0B0E1A) : null,
-        indicatorColor: seed.withValues(alpha: 0.18),
+        backgroundColor: sombre ? Lulu.navigation : surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: accent.withValues(alpha: 0.18),
         iconTheme: WidgetStateProperty.resolveWith(
-          (states) => IconThemeData(
-            color: states.contains(WidgetState.selected) ? seed
-                : (isDark ? const Color(0xFF94A3B8) : schema.onSurfaceVariant),
-          ),
+          (s) => IconThemeData(color: s.contains(WidgetState.selected) ? accent : texteDoux),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) => GoogleFonts.rubik(
-            fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w600 : FontWeight.w400,
-            color: states.contains(WidgetState.selected) ? seed
-                : (isDark ? const Color(0xFF94A3B8) : schema.onSurfaceVariant),
+          (s) => TextStyle(
+            fontFamily: Lulu.police,
+            fontSize: 12,
+            fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w400,
+            color: s.contains(WidgetState.selected) ? accent : texteDoux,
           ),
         ),
       ),
 
-      // Cartes glass-like en mode sombre.
       cardTheme: CardThemeData(
         margin: EdgeInsets.zero,
-        color: isDark ? const Color(0xFF1E293B) : null,
+        color: sombre ? Lulu.surfaceHaute : surface,
         surfaceTintColor: Colors.transparent,
-        elevation: isDark ? 0 : null,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: isDark
-              ? BorderSide(color: Colors.white.withValues(alpha: 0.07), width: 1)
-              : BorderSide.none,
+          borderRadius: rayonLg,
+          side: BorderSide(color: sombre ? Colors.white.withValues(alpha: 0.07) : bordure),
         ),
       ),
 
-      // Inputs sobres.
+      listTileTheme: ListTileThemeData(
+        iconColor: texteDoux,
+        shape: RoundedRectangleBorder(borderRadius: rayonMd),
+        subtitleTextStyle: TextStyle(fontFamily: Lulu.police, color: texteDoux, fontSize: 13),
+      ),
+
+      dividerTheme: DividerThemeData(color: bordure.withValues(alpha: 0.6), thickness: 1, space: 1),
+
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: seed, width: 1.5),
-        ),
+        filled: true,
+        fillColor: sombre ? Lulu.surface : surface,
+        hintStyle: TextStyle(color: sombre ? Lulu.texteEteint : texteDoux),
+        border: OutlineInputBorder(borderRadius: rayonMd, borderSide: BorderSide(color: bordure)),
+        enabledBorder: OutlineInputBorder(borderRadius: rayonMd, borderSide: BorderSide(color: bordure)),
+        focusedBorder: OutlineInputBorder(borderRadius: rayonMd, borderSide: BorderSide(color: accent, width: 1.5)),
       ),
 
-      // SnackBar flottant, coins arrondis.
+      dialogTheme: DialogThemeData(
+        backgroundColor: sombre ? Lulu.surface : surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Lulu.rXl), side: BorderSide(color: bordure.withValues(alpha: 0.6))),
+      ),
+
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: sombre ? Lulu.surface : surface,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+      ),
+
+      popupMenuTheme: PopupMenuThemeData(
+        color: surfaceHaute,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: rayonMd, side: BorderSide(color: bordure.withValues(alpha: 0.6))),
+      ),
+
+      bannerTheme: MaterialBannerThemeData(backgroundColor: surfaceHaute, dividerColor: Colors.transparent),
+
+      chipTheme: ChipThemeData(
+        side: BorderSide(color: bordure),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        selectedColor: accent.withValues(alpha: 0.18),
+        checkmarkColor: accent,
+      ),
+
+      tooltipTheme: TooltipThemeData(
+        waitDuration: const Duration(milliseconds: 400),
+        decoration: BoxDecoration(color: sombre ? Lulu.surfaceHaute : Lulu.texteClair, borderRadius: BorderRadius.circular(Lulu.rSm)),
+        textStyle: const TextStyle(fontFamily: Lulu.police, color: Lulu.texte, fontSize: 12),
+      ),
+
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        backgroundColor: isDark ? const Color(0xFF1E293B) : null,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Lulu.rLg - 2)),
+        backgroundColor: sombre ? Lulu.surfaceHaute : Lulu.texteClair,
+        contentTextStyle: const TextStyle(fontFamily: Lulu.police, color: Lulu.texte),
+        actionTextColor: Lulu.accent,
       ),
 
-      // FilledButton = vert LuluFiles.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: seed,
-          foregroundColor: Colors.white,
-          textStyle: GoogleFonts.rubik(fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          backgroundColor: accent,
+          foregroundColor: surAccent,
+          textStyle: const TextStyle(fontFamily: Lulu.police, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: rayonMd),
         ),
       ),
-
-      // ElevatedButton cohérent.
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: texte,
+          side: BorderSide(color: bordure),
+          textStyle: const TextStyle(fontFamily: Lulu.police, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: rayonMd),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: accent,
+          textStyle: const TextStyle(fontFamily: Lulu.police, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: rayonMd),
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          textStyle: GoogleFonts.rubik(fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontFamily: Lulu.police, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: rayonMd),
         ),
       ),
-
-      // Texte : Rubik à toutes les tailles via google_fonts.
-      textTheme: GoogleFonts.rubikTextTheme(
-        const TextTheme(
-          displayLarge:  TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1.5),
-          displayMedium: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -1),
-          displaySmall:  TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
-          headlineLarge: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
-          headlineMedium:TextStyle(fontWeight: FontWeight.w600, letterSpacing: -0.3),
-          headlineSmall: TextStyle(fontWeight: FontWeight.w600),
-          titleLarge:    TextStyle(fontWeight: FontWeight.w600),
-          titleMedium:   TextStyle(fontWeight: FontWeight.w500),
-          titleSmall:    TextStyle(fontWeight: FontWeight.w500),
-          labelLarge:    TextStyle(fontWeight: FontWeight.w600),
-          labelMedium:   TextStyle(fontWeight: FontWeight.w500),
-          labelSmall:    TextStyle(fontWeight: FontWeight.w500, letterSpacing: 0.5),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: accent,
+        foregroundColor: surAccent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Lulu.rXl)),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          side: WidgetStatePropertyAll(BorderSide(color: bordure)),
+          backgroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? accent.withValues(alpha: 0.18) : null),
+          foregroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? accent : texte),
         ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? surAccent : null),
+        trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? accent : null),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? accent : null),
+        checkColor: WidgetStatePropertyAll(surAccent),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: accent),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: accent,
+        selectionColor: accent.withValues(alpha: 0.3),
+        selectionHandleColor: accent,
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: WidgetStatePropertyAll(bordure),
+        radius: const Radius.circular(Lulu.rSm),
       ),
     );
   }

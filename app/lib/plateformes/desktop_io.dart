@@ -99,6 +99,20 @@ class IntegrationDesktop with ClipboardListener, WindowListener {
     await _essayer(() async => actif ? await LaunchAtStartup.instance.enable() : await LaunchAtStartup.instance.disable());
   }
 
+  static Future<void> _ouvrirChemin(String chemin) async {
+    await _essayer(() async {
+      if (Platform.isWindows) {
+        await Process.run('explorer', ['/select,', chemin]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', ['-R', chemin]);
+      } else {
+        await Process.run('xdg-open', [File(chemin).parent.path]);
+      }
+    });
+  }
+
+  static Future<void> ouvrirDossier(String chemin) => _ouvrirChemin(chemin);
+
   // --- Raccourcis globaux (B3, H9) ---------------------------------------------------------
 
   Future<void> _installerRaccourcis() async {

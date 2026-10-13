@@ -29,3 +29,8 @@ Chaque case cochée correspond à un artefact réellement produit et validé, pa
 - Fonctionnalités : onboarding/auth, tableau de post-it, recherche globale, réglages, presse-papier, tâches, snippets, rappels, fichiers, envois, liens publics, appareils.
 - Page d'accueil publique séparée (ADR-002) → `public/index.html`.
 - À faire : intégration backend réel, tests de synchronisation croisés, déploiement.
+## Design system et UX — état 2026-10-13
+
+- Design system LuluFiles appliqué à l'app (jetons `Lulu` dans `app/lib/ui/theme.dart`) et à la page d'accueil ; polices Rubik/Itim embarquées (D52), contraste AA testé (D53).
+- Esprit UX généralisé (D54) : filtre en direct + surlignage + Ctrl+F/Échap sur chaque écran, confirmations explicites, messages avec action suivante, accessibilité des écrans de compte (clé de récupération lisible par lecteur d'écran, codes à 6 chiffres).
+- Page de consultation des liens publics `public/l/` (D55), pages `confidentialite.html` et `conditions.html` (champs éditeur/hébergeur à compléter avant lancement).

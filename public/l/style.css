@@ -1,0 +1,166 @@
+/* Page publique des liens LuluBoard : même design system que la page d'accueil. */
+@font-face { font-family: "Rubik"; src: url("/l/fonts/Rubik-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("/l/fonts/Rubik-Medium.ttf") format("truetype"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("/l/fonts/Rubik-SemiBold.ttf") format("truetype"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("/l/fonts/Rubik-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Itim"; src: url("/l/fonts/Itim-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+
+:root {
+  --bg: #020617;
+  --primary: #0F172A;
+  --secondary: #1E293B;
+  --accent: #22C55E;
+  --accent-dim: #16A34A;
+  --fg: #F8FAFC;
+  --border: #334155;
+  --text-soft: #94A3B8;   /* 7,9:1 sur --bg, 6,9:1 sur --primary */
+  --danger: #FCA5A5;      /* 9,6:1 sur --primary */
+  --font-body: "Rubik", system-ui, sans-serif;
+  --font-brand: "Itim", cursive;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --t-fast: 150ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+[hidden] { display: none !important; }
+
+a { color: var(--accent); text-underline-offset: 3px; }
+a:hover { color: #4ADE80; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.lien-evitement {
+  position: absolute; left: 1rem; top: -4rem; z-index: 10;
+  background: var(--accent); color: var(--bg); padding: .5rem 1rem; border-radius: var(--r-md); font-weight: 600;
+}
+.lien-evitement:focus { top: 1rem; }
+
+.entete {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  max-width: 860px; width: 100%; margin: 0 auto; padding: 1.25rem 1rem;
+}
+.marque { font-family: var(--font-brand); font-size: 1.6rem; color: var(--accent); text-decoration: none; }
+.badge-chiffre {
+  font-size: .8rem; font-weight: 500; color: var(--fg);
+  background: var(--secondary); border: 1px solid var(--border); border-radius: 999px; padding: .25rem .75rem;
+}
+.badge-chiffre::before { content: "\1F512\FE0E  "; }
+
+.principal { flex: 1; width: 100%; max-width: 860px; margin: 0 auto; padding: 0 1rem 2rem; }
+.principal:focus { outline: none; }
+
+.carte {
+  background: var(--primary); border: 1px solid var(--border); border-radius: var(--r-xl);
+  padding: 1.5rem; margin-top: 1rem;
+}
+@media (max-width: 520px) { .carte { padding: 1rem; border-radius: var(--r-lg); } }
+
+.titre { font-size: clamp(1.3rem, 3vw, 1.75rem); font-weight: 700; line-height: 1.25; margin: 0 0 .5rem; overflow-wrap: anywhere; }
+.sur-titre { font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin: 0 0 .25rem; }
+.texte-doux { color: var(--text-soft); }
+.meta { color: var(--text-soft); font-size: .875rem; margin: 0 0 1rem; }
+
+.etat { display: flex; align-items: center; gap: 1rem; }
+.etat p { margin: 0; }
+.etat h1 { margin: 0 0 .25rem; font-size: 1.25rem; }
+.etat.erreur-etat { border-color: #7F1D1D; }
+.chargeur {
+  width: 28px; height: 28px; flex: none; border-radius: 50%;
+  border: 3px solid var(--secondary); border-top-color: var(--accent); animation: tourne 0.9s linear infinite;
+}
+@keyframes tourne { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .chargeur { animation-duration: 3s; } }
+
+/* Formulaires et boutons */
+label { display: block; font-weight: 500; margin: 1rem 0 .4rem; }
+.ligne-champ { display: flex; gap: .5rem; flex-wrap: wrap; }
+input[type="password"] {
+  flex: 1 1 220px; min-height: 44px; padding: .6rem .8rem; font: inherit; color: var(--fg);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+}
+input[type="password"]:focus-visible { border-color: var(--accent); }
+.bouton {
+  min-height: 44px; padding: .6rem 1.1rem; font: inherit; font-weight: 600; border-radius: var(--r-md);
+  cursor: pointer; border: 1px solid transparent; transition: background var(--t-fast), border-color var(--t-fast);
+}
+.bouton:disabled { opacity: .6; cursor: progress; }
+.bouton-principal { background: var(--accent); color: var(--bg); }
+.bouton-principal:hover:not(:disabled) { background: #4ADE80; }
+.bouton-secondaire { background: var(--secondary); color: var(--fg); border-color: var(--border); }
+.bouton-secondaire:hover:not(:disabled) { border-color: var(--accent); }
+.erreur { color: var(--danger); margin: .75rem 0 0; }
+
+.actions-live { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; font-size: .875rem; }
+
+/* Post-it */
+.post-it { border-left: 6px solid var(--couleur-post-it, var(--accent)); padding-left: 1rem; }
+
+/* Markdown rendu */
+.md { overflow-wrap: anywhere; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { line-height: 1.3; margin: 1.2em 0 .5em; }
+.md h1 { font-size: 1.5rem; } .md h2 { font-size: 1.3rem; } .md h3 { font-size: 1.15rem; }
+.md p { margin: 0 0 .9em; }
+.md ul, .md ol { padding-left: 1.5rem; margin: 0 0 .9em; }
+.md li.coche { list-style: none; margin-left: -1.4rem; }
+.md blockquote { margin: 0 0 .9em; padding: .25rem 1rem; border-left: 3px solid var(--border); color: var(--text-soft); }
+.md code { font-family: var(--font-mono); font-size: .9em; background: var(--secondary); padding: .1em .35em; border-radius: 4px; }
+.md pre code { background: none; padding: 0; }
+.md hr { border: 0; border-top: 1px solid var(--border); margin: 1.2em 0; }
+pre {
+  font-family: var(--font-mono); font-size: .9rem; line-height: 1.5; margin: 0 0 .9em;
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 1rem; overflow-x: auto; tab-size: 4;
+}
+
+/* Snippet */
+.barre-code { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin: 1rem 0 .5rem; }
+.langage { font-family: var(--font-mono); font-size: .8rem; color: var(--text-soft); background: var(--secondary); padding: .2rem .6rem; border-radius: 999px; }
+
+/* Tâches */
+.taches, .taches ul { list-style: none; margin: 0; padding: 0; }
+.taches ul { padding-left: 1.75rem; border-left: 1px dashed var(--border); margin-left: .6rem; }
+.tache { margin: .35rem 0; }
+.tache-ligne { display: flex; align-items: flex-start; gap: .6rem; }
+.case {
+  flex: none; width: 1.15rem; height: 1.15rem; margin-top: .25rem; border-radius: 4px;
+  border: 2px solid var(--text-soft); display: inline-flex; align-items: center; justify-content: center;
+}
+.case.faite { background: var(--accent); border-color: var(--accent); }
+.case.faite::after { content: ""; width: .35rem; height: .65rem; border: solid var(--bg); border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+.tache-titre.faite { text-decoration: line-through; color: var(--text-soft); }
+.tache-titre p { margin: 0; }
+.etiquette-tache { font-size: .75rem; color: var(--text-soft); border: 1px solid var(--border); border-radius: 999px; padding: 0 .5rem; margin-left: .25rem; white-space: nowrap; }
+.etiquette-tache.haute { color: #FCD34D; border-color: #92400E; }
+.vide { color: var(--text-soft); font-style: italic; }
+
+/* Fichier */
+.fichier { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.icone-fichier {
+  flex: none; width: 56px; height: 56px; border-radius: var(--r-lg); background: var(--secondary); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .75rem; color: var(--accent); text-transform: uppercase;
+}
+.fichier-info { flex: 1 1 200px; min-width: 0; }
+.fichier-info .titre { margin: 0; }
+progress { width: 100%; height: 8px; margin-top: 1rem; accent-color: var(--accent); }
+
+.pied {
+  border-top: 1px solid var(--border); padding: 1.25rem 1rem; text-align: center; font-size: .875rem; color: var(--text-soft);
+}
+.pied p { margin: .25rem auto; max-width: 860px; }
+.pied strong { color: var(--fg); font-weight: 600; }

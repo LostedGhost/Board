@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'fonctionnalites/compte/ecran_appareil_en_attente.dart';
@@ -12,6 +14,11 @@ import 'ui/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  LicenseRegistry.addLicense(() async* {
+    for (final (police, fichier) in [('Rubik', 'OFL-Rubik.txt'), ('Itim', 'OFL-Itim.txt')]) {
+      yield LicenseEntryWithLineBreaks([police], await rootBundle.loadString('assets/fonts/$fichier'));
+    }
+  });
   final noyau = await Noyau.demarrer();
   if (noyau.estDesktop) await IntegrationDesktop.initialiser(noyau);
   runApp(PorteurNoyau(noyau: noyau, child: const LuluBoard()));

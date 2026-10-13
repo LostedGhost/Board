@@ -18,6 +18,7 @@ import '../noyau/session/service_compte.dart';
 import '../noyau/synchro/moteur_synchro.dart';
 import 'capture_rapide.dart';
 import 'commun.dart';
+import 'theme.dart';
 
 class Section {
   const Section(this.titre, this.icone, this.iconeActive, this.construire, {this.compteRequis = false});
@@ -174,9 +175,18 @@ class _CoquilleState extends State<Coquille> {
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
           labelType: NavigationRailLabelType.all,
-          leading: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Icon(Icons.dashboard_customize, size: 32),
+          leading: Padding(
+            padding: const EdgeInsets.symmetric(vertical: Lulu.sm + 4),
+            child: Semantics(
+              label: 'LuluBoard',
+              child: ExcludeSemantics(
+                child: Column(children: [
+                  Icon(Icons.dashboard_customize, size: 28, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(height: Lulu.xs),
+                  Text('Lulu', style: TextStyle(fontFamily: Lulu.policeMarque, fontSize: 18, color: Theme.of(context).colorScheme.primary)),
+                ]),
+              ),
+            ),
           ),
           destinations: [
             for (final s in sections)

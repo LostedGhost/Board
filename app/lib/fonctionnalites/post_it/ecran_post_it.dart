@@ -6,10 +6,13 @@ import 'package:markdown_widget/markdown_widget.dart';
 import '../../noyau/depot.dart';
 import '../../noyau/noyau.dart';
 import '../../noyau/stockage/base_locale.dart';
-import '../../plateformes/desktop.dart';
 import '../../ui/commun.dart';
+import '../../ui/recherche_locale.dart';
 import '../../ui/theme.dart';
 import '../commun/actions_element.dart';
+import 'editeur_post_it.dart';
+
+export 'editeur_post_it.dart' show ouvrirEditeurPostIt, choisirCouleur;
 
 /// C1-C3, H12 : tableaux libres de post-it.
 class EcranPostIt extends StatefulWidget {
@@ -22,10 +25,26 @@ class EcranPostIt extends StatefulWidget {
 class _EcranPostItState extends State<EcranPostIt> {
   String? _tableau;
   bool _archives = false;
+  final _recherche = TextEditingController();
+  final _focusRecherche = FocusNode();
+  String _filtre = '';
+
+  @override
+  void dispose() {
+    _recherche.dispose();
+    _focusRecherche.dispose();
+    super.dispose();
+  }
+
+  void _viderFiltre() {
+    _recherche.clear();
+    setState(() => _filtre = '');
+  }
 
   @override
   Widget build(BuildContext context) {
     final depot = context.noyau.depot;
+    final schema = Theme.of(context).colorScheme;
     return StreamBuilder<List<Enr>>(
       stream: depot.tableaux(),
       builder: (context, snap) {
@@ -33,73 +52,127 @@ class _EcranPostItState extends State<EcranPostIt> {
         final tableaux = snap.data!..sort((a, b) => ((a['donnees'] as Map)['ordre'] as num? ?? 0).compareTo((b['donnees'] as Map)['ordre'] as num? ?? 0));
         if (tableaux.isEmpty) {
           return EtatVide(
-            icone: Icons.sticky_note_2,
+            icone: Icons.dashboard_customize_outlined,
             titre: 'Aucun tableau',
             texte: 'Un tableau est un espace libre où poser vos post-it, les déplacer et les superposer.',
-            action: FilledButton(onPressed: () => depot.creerTableau('Mon tableau', 0), child: const Text('Créer mon premier tableau')),
+            action: FilledButton.icon(
+              onPressed: () => depot.creerTableau('Mon tableau', 0),
+              icon: const Icon(Icons.add),
+              label: const Text('Créer mon premier tableau'),
+            ),
           );
         }
         final courant = tableaux.firstWhere((t) => t['id'] == _tableau, orElse: () => tableaux.first);
-        return Column(
-          children: [
-            Material(
-              elevation: 1,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      child: Row(
+        final large = MediaQuery.sizeOf(context).width >= 720;
+        final champ = ChampRecherche(
+          controller: _recherche,
+          focusNode: _focusRecherche,
+          indice: 'Filtrer les post-it (Ctrl+F)',
+          padding: EdgeInsets.zero,
+          onChanged: (v) => setState(() => _filtre = v.trim()),
+        );
+        return RaccourciFiltre(
+          focusNode: _focusRecherche,
+          child: Column(
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: schema.surface,
+                  border: Border(bottom: BorderSide(color: schema.outlineVariant)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(Lulu.sm),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
-                          for (final t in tableaux)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: InputChip(
-                                label: Text(((t['donnees'] as Map)['nom'] ?? 'Sans nom').toString()),
-                                selected: t['id'] == courant['id'],
-                                onPressed: () => setState(() => _tableau = t['id'] as String),
-                                onDeleted: t['id'] == courant['id'] ? () => _menuTableau(context, t, tableaux) : null,
-                                deleteIcon: const Icon(Icons.more_horiz, size: 18),
-                                deleteButtonTooltipMessage: 'Gérer le tableau',
-                              ),
+                          Expanded(child: _ongletsTableaux(context, tableaux, courant)),
+                          if (large) ...[
+                            const SizedBox(width: Lulu.sm),
+                            SizedBox(width: 260, child: champ),
+                          ],
+                          const SizedBox(width: Lulu.sm),
+                          Tooltip(
+                            message: _archives ? 'Revenir aux post-it actifs' : 'Afficher les post-it archivés',
+                            child: FilterChip(
+                              avatar: _archives ? null : const Icon(Icons.archive_outlined, size: 18),
+                              label: const Text('Archivés'),
+                              selected: _archives,
+                              onSelected: (v) => setState(() => _archives = v),
                             ),
-                          IconButton(
-                            tooltip: 'Nouveau tableau',
-                            icon: const Icon(Icons.add),
-                            onPressed: () async {
-                              final nom = await demanderTexte(context, 'Nouveau tableau');
-                              if (nom != null && nom.isNotEmpty) {
-                                final id = await depot.creerTableau(nom, tableaux.length);
-                                setState(() => _tableau = id);
-                              }
-                            },
+                          ),
+                          const SizedBox(width: Lulu.sm),
+                          Tooltip(
+                            message: 'Ajouter un post-it sur ce tableau',
+                            child: FilledButton.icon(
+                              onPressed: () => _nouveauPostIt(context, courant['id']! as String),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Post-it'),
+                            ),
                           ),
                         ],
                       ),
-                    ),
+                      if (!large) Padding(padding: const EdgeInsets.only(top: Lulu.sm), child: champ),
+                    ],
                   ),
-                  FilterChip(label: const Text('Archivés'), selected: _archives, onSelected: (v) => setState(() => _archives = v)),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: () => _nouveauPostIt(context, courant['id']! as String),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Post-it'),
-                  ),
-                  const SizedBox(width: 8),
-                ],
+                ),
               ),
-            ),
-            Expanded(child: _Tableau(tableauId: courant['id']! as String, archives: _archives)),
-          ],
+              Expanded(
+                child: _Tableau(
+                  tableauId: courant['id']! as String,
+                  archives: _archives,
+                  recherche: _filtre,
+                  onViderFiltre: _viderFiltre,
+                  onNouveau: () => _nouveauPostIt(context, courant['id']! as String),
+                ),
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+
+  Widget _ongletsTableaux(BuildContext context, List<Enr> tableaux, Enr courant) {
+    final depot = context.noyau.depot;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final t in tableaux)
+            Padding(
+              padding: const EdgeInsets.only(right: Lulu.sm),
+              child: InputChip(
+                label: Text(((t['donnees'] as Map)['nom'] ?? 'Sans nom').toString()),
+                selected: t['id'] == courant['id'],
+                showCheckmark: false,
+                tooltip: 'Ouvrir ce tableau',
+                onPressed: () => setState(() => _tableau = t['id'] as String),
+                onDeleted: t['id'] == courant['id'] ? () => _menuTableau(context, t, tableaux) : null,
+                deleteIcon: const Icon(Icons.more_horiz, size: 18),
+                deleteButtonTooltipMessage: 'Gérer le tableau',
+              ),
+            ),
+          IconButton(
+            tooltip: 'Nouveau tableau',
+            icon: const Icon(Icons.add),
+            onPressed: () async {
+              final nom = await demanderTexte(context, 'Nouveau tableau');
+              if (nom != null && nom.isNotEmpty) {
+                final id = await depot.creerTableau(nom, tableaux.length);
+                setState(() => _tableau = id);
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
   Future<void> _nouveauPostIt(BuildContext context, String tableauId) async {
     final depot = context.noyau.depot;
     final r = math.Random();
+    // Couleur au hasard parmi les 5 premières (le blanc reste un choix explicite).
     final id = await depot.creer(TypeEl.postIt, {
       'contenu': '',
       'couleurFond': ThemeLulu.couleursPostIt[r.nextInt(5)],
@@ -109,6 +182,7 @@ class _EcranPostItState extends State<EcranPostIt> {
       'hauteur': 200.0,
       'ordreEmpilement': DateTime.now().millisecondsSinceEpoch ~/ 1000,
     }, parentId: tableauId);
+    if (_archives) setState(() => _archives = false);
     final e = await depot.element(id);
     if (e != null && context.mounted) await ouvrirEditeurPostIt(context, e);
   }
@@ -120,8 +194,14 @@ class _EcranPostItState extends State<EcranPostIt> {
       builder: (c) => SimpleDialog(
         title: Text(((t['donnees'] as Map)['nom'] ?? '').toString()),
         children: [
-          SimpleDialogOption(onPressed: () => Navigator.pop(c, 'renommer'), child: const Text('Renommer')),
-          SimpleDialogOption(onPressed: () => Navigator.pop(c, 'supprimer'), child: const Text('Supprimer')),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(c, 'renommer'),
+            child: const ListTile(leading: Icon(Icons.edit_outlined), title: Text('Renommer')),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(c, 'supprimer'),
+            child: const ListTile(leading: Icon(Icons.delete_outline), title: Text('Supprimer')),
+          ),
         ],
       ),
     );
@@ -137,27 +217,45 @@ class _EcranPostItState extends State<EcranPostIt> {
         context: context,
         builder: (c) => AlertDialog(
           title: const Text('Supprimer le tableau ?'),
-          content: Text(postIts == 0 ? 'Ce tableau est vide.' : 'Il contient $postIts post-it.'),
+          content: Text(postIts == 0
+              ? 'Ce tableau est vide.'
+              : 'Il contient $postIts post-it. Déplacez-les vers un autre tableau, ou supprimez-les définitivement avec le tableau.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(c), child: const Text('Annuler')),
             if (postIts > 0 && autres.isNotEmpty)
               TextButton(onPressed: () => Navigator.pop(c, 'deplacer'), child: Text('Déplacer vers « ${(autres.first['donnees'] as Map)['nom']} »')),
-            FilledButton(onPressed: () => Navigator.pop(c, 'supprimer'), child: Text(postIts > 0 ? 'Tout supprimer' : 'Supprimer')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Theme.of(c).colorScheme.error, foregroundColor: Theme.of(c).colorScheme.onError),
+              onPressed: () => Navigator.pop(c, 'supprimer'),
+              child: Text(postIts > 0 ? 'Tout supprimer' : 'Supprimer'),
+            ),
           ],
         ),
       );
       if (choix == null) return;
       await depot.supprimerTableau(t['id']! as String, versTableau: choix == 'deplacer' ? autres.first['id'] as String : null);
       setState(() => _tableau = null);
+      if (context.mounted) {
+        afficherMessage(context, choix == 'deplacer' ? 'Tableau supprimé, ses post-it ont été déplacés.' : 'Tableau supprimé.');
+      }
     }
   }
 }
 
 class _Tableau extends StatelessWidget {
-  const _Tableau({required this.tableauId, required this.archives});
+  const _Tableau({
+    required this.tableauId,
+    required this.archives,
+    required this.recherche,
+    required this.onViderFiltre,
+    required this.onNouveau,
+  });
 
   final String tableauId;
   final bool archives;
+  final String recherche;
+  final VoidCallback onViderFiltre;
+  final VoidCallback onNouveau;
 
   @override
   Widget build(BuildContext context) {
@@ -165,26 +263,80 @@ class _Tableau extends StatelessWidget {
     return StreamBuilder<List<Enr>>(
       stream: depot.elements(TypeEl.postIt, parentId: tableauId, archive: archives),
       builder: (context, snap) {
-        final postIts = (snap.data ?? [])
-          ..sort((a, b) => (((a['donnees'] as Map)['ordreEmpilement'] as num?) ?? 0)
-              .compareTo(((b['donnees'] as Map)['ordreEmpilement'] as num?) ?? 0));
+        final postIts = snap.data ?? [];
         if (snap.hasData && postIts.isEmpty) {
           return EtatVide(
             icone: archives ? Icons.archive_outlined : Icons.sticky_note_2_outlined,
-            titre: archives ? 'Aucun post-it archivé' : 'Tableau vide',
-            texte: archives ? 'Les post-it archivés apparaissent ici.' : 'Ajoutez un post-it avec le bouton « Post-it ».',
+            titre: archives ? 'Aucun post-it archivé' : 'Ce tableau attend vos idées',
+            texte: archives
+                ? 'Les post-it archivés apparaissent ici. Archivez-en un depuis son éditeur.'
+                : 'Notez une idée, une liste ou un lien en Markdown, puis déplacez et superposez librement vos post-it.',
+            action: archives
+                ? null
+                : FilledButton.icon(onPressed: onNouveau, icon: const Icon(Icons.add), label: const Text('Créer mon premier post-it')),
           );
         }
-        return InteractiveViewer(
-          constrained: false,
-          minScale: 0.4,
-          maxScale: 2,
-          boundaryMargin: const EdgeInsets.all(400),
-          child: SizedBox(
-            width: 3000,
-            height: 2000,
-            child: Stack(children: [for (final p in postIts) _PostIt(key: ValueKey(p['id']), postIt: p)]),
-          ),
+        bool correspond(Enr p) => concorde(((p['donnees'] as Map?)?['contenu'] ?? '').toString(), recherche);
+        final nbConcordants = postIts.where(correspond).length;
+        if (snap.hasData && recherche.isNotEmpty && nbConcordants == 0) {
+          return AucunResultat(recherche: recherche, onVider: onViderFiltre);
+        }
+        // Pendant un filtrage, les post-it concordants passent au-dessus des autres.
+        int rang(Enr p) => recherche.isNotEmpty && correspond(p) ? 1 : 0;
+        postIts.sort((a, b) {
+          final r = rang(a).compareTo(rang(b));
+          if (r != 0) return r;
+          return (((a['donnees'] as Map)['ordreEmpilement'] as num?) ?? 0).compareTo(((b['donnees'] as Map)['ordreEmpilement'] as num?) ?? 0);
+        });
+        final schema = Theme.of(context).colorScheme;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                constrained: false,
+                minScale: 0.4,
+                maxScale: 2,
+                boundaryMargin: const EdgeInsets.all(400),
+                child: SizedBox(
+                  width: 3000,
+                  height: 2000,
+                  child: Stack(
+                    children: [
+                      for (final p in postIts)
+                        _PostIt(key: ValueKey(p['id']), postIt: p, recherche: recherche, concorde: correspond(p)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (recherche.isNotEmpty)
+              Positioned(
+                top: Lulu.sm,
+                left: Lulu.sm,
+                child: Semantics(
+                  liveRegion: true,
+                  child: Material(
+                    color: schema.surfaceContainerHigh,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(Lulu.rLg),
+                      side: BorderSide(color: schema.outlineVariant),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(Lulu.md, Lulu.xs, Lulu.xs, Lulu.xs),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('$nbConcordants post-it sur ${postIts.length} correspond${nbConcordants > 1 ? 'ent' : ''}',
+                              style: Theme.of(context).textTheme.bodySmall),
+                          const SizedBox(width: Lulu.xs),
+                          TextButton(onPressed: onViderFiltre, child: const Text('Tout afficher')),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -192,9 +344,11 @@ class _Tableau extends StatelessWidget {
 }
 
 class _PostIt extends StatefulWidget {
-  const _PostIt({super.key, required this.postIt});
+  const _PostIt({super.key, required this.postIt, required this.recherche, required this.concorde});
 
   final Enr postIt;
+  final String recherche;
+  final bool concorde;
 
   @override
   State<_PostIt> createState() => _PostItState();
@@ -226,305 +380,122 @@ class _PostItState extends State<_PostIt> {
     final texte = couleurTexte(fond);
     final depot = context.noyau.depot;
     final id = widget.postIt['id']! as String;
+    final contenu = _d['contenu'] as String? ?? '';
+    final filtre = widget.recherche.isNotEmpty;
+    final misEnAvant = filtre && widget.concorde;
+    final schema = Theme.of(context).colorScheme;
+
+    final Widget corps;
+    if (contenu.isEmpty) {
+      corps = Text('Double-cliquez pour écrire…', style: TextStyle(color: texte.withValues(alpha: 0.75), fontStyle: FontStyle.italic));
+    } else if (misEnAvant) {
+      // Pendant le filtrage : texte brut, occurrences surlignées (lisibles sur le fond du post-it).
+      corps = _TexteSurlignePostIt(contenu, widget.recherche, texte);
+    } else {
+      corps = MarkdownBlock(data: contenu, selectable: false, config: configMarkdownPostIt(texte));
+    }
 
     return Positioned(
       left: pos.dx,
       top: pos.dy,
       width: taille.width,
       height: taille.height,
-      child: GestureDetector(
-        onTapDown: (_) => _premierPlan(),
-        onDoubleTap: () => ouvrirEditeurPostIt(context, widget.postIt),
-        onPanUpdate: (d) => setState(() => _position = (_position ?? pos) + d.delta),
-        onPanEnd: (_) => depot.modifierDonnees(id, {'x': _position!.dx.clamp(0, 2800), 'y': _position!.dy.clamp(0, 1800)}),
-        child: Material(
-          color: fond,
-          elevation: 3,
-          borderRadius: BorderRadius.circular(6),
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 18),
-                child: DefaultTextStyle.merge(
-                  style: TextStyle(color: texte),
-                  child: (_d['contenu'] as String? ?? '').isEmpty
-                      ? Text('Double-cliquez pour écrire…', style: TextStyle(color: texte.withValues(alpha: 0.7), fontStyle: FontStyle.italic))
-                      : ClipRect(
-                          child: MarkdownBlock(
-                            data: _d['contenu'] as String,
-                            selectable: false,
-                            config: MarkdownConfig(configs: [
-                              PConfig(textStyle: TextStyle(color: texte, fontSize: 14)),
-                              H1Config(style: TextStyle(color: texte, fontSize: 22, fontWeight: FontWeight.bold)),
-                              H2Config(style: TextStyle(color: texte, fontSize: 18, fontWeight: FontWeight.bold)),
-                              LinkConfig(style: TextStyle(color: texte, decoration: TextDecoration.underline)),
-                            ]),
+      child: AnimatedOpacity(
+        duration: Lulu.normal,
+        opacity: filtre && !widget.concorde ? 0.2 : 1,
+        child: Semantics(
+          label: contenu.isEmpty ? 'Post-it vide' : 'Post-it : ${contenu.split('\n').first}',
+          hint: 'Double-toucher pour modifier',
+          onTap: () => ouvrirEditeurPostIt(context, widget.postIt),
+          child: GestureDetector(
+            onTapDown: (_) => _premierPlan(),
+            onDoubleTap: () => ouvrirEditeurPostIt(context, widget.postIt),
+            onPanUpdate: (d) => setState(() => _position = (_position ?? pos) + d.delta),
+            onPanEnd: (_) => depot.modifierDonnees(id, {'x': _position!.dx.clamp(0, 2800), 'y': _position!.dy.clamp(0, 1800)}),
+            child: Material(
+              color: fond,
+              elevation: misEnAvant ? 8 : 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Lulu.rMd),
+                side: misEnAvant ? BorderSide(color: schema.primary, width: 2) : BorderSide(color: texte.withValues(alpha: 0.12)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(Lulu.md, Lulu.md, Lulu.xl, Lulu.lg),
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(color: texte),
+                      child: ClipRect(child: corps),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Theme(
+                      data: Theme.of(context).copyWith(iconTheme: IconThemeData(color: texte)),
+                      child: MenuElement(element: widget.postIt),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Tooltip(
+                      message: 'Redimensionner',
+                      child: GestureDetector(
+                        onPanUpdate: (d) => setState(() {
+                          final t = _taille ?? taille;
+                          _taille = Size(math.max(140, t.width + d.delta.dx), math.max(100, t.height + d.delta.dy));
+                        }),
+                        onPanEnd: (_) => depot.modifierDonnees(id, {'largeur': _taille!.width, 'hauteur': _taille!.height}),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.resizeDownRight,
+                          child: Padding(
+                            padding: const EdgeInsets.all(Lulu.xs),
+                            child: Icon(Icons.south_east, size: 16, color: texte.withValues(alpha: 0.6)),
                           ),
                         ),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Theme(
-                  data: Theme.of(context).copyWith(iconTheme: IconThemeData(color: texte)),
-                  child: MenuElement(
-                    element: widget.postIt,
-                    extra: const [],
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: GestureDetector(
-                  onPanUpdate: (d) => setState(() {
-                    final t = _taille ?? taille;
-                    _taille = Size(math.max(140, t.width + d.delta.dx), math.max(100, t.height + d.delta.dy));
-                  }),
-                  onPanEnd: (_) => depot.modifierDonnees(id, {'largeur': _taille!.width, 'hauteur': _taille!.height}),
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeDownRight,
-                    child: Icon(Icons.drag_handle, size: 18, color: texte.withValues(alpha: 0.6)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Édition d'un post-it : Markdown, couleur (C1), archivage, historique (C3), premier plan (C2).
-Future<void> ouvrirEditeurPostIt(BuildContext context, Enr postIt) =>
-    showDialog<void>(context: context, builder: (_) => _EditeurPostIt(postIt));
-
-class _EditeurPostIt extends StatefulWidget {
-  const _EditeurPostIt(this.postIt);
-
-  final Enr postIt;
-
-  @override
-  State<_EditeurPostIt> createState() => _EditeurPostItState();
-}
-
-class _EditeurPostItState extends State<_EditeurPostIt> {
-  late final TextEditingController _contenu =
-      TextEditingController(text: ((widget.postIt['donnees'] as Map?)?['contenu'] ?? '').toString());
-  late String _couleur = ((widget.postIt['donnees'] as Map?)?['couleurFond'] ?? '#FFE066').toString();
-  bool _apercu = false;
-
-  String get _id => widget.postIt['id']! as String;
-
-  @override
-  Widget build(BuildContext context) {
-    final depot = context.noyau.depot;
-    final fond = couleurDepuisHex(_couleur);
-    final texte = couleurTexte(fond);
-    return AlertDialog(
-      backgroundColor: fond,
-      title: Row(
-        children: [
-          Text('Post-it', style: TextStyle(color: texte)),
-          const Spacer(),
-          IconButton(
-            tooltip: _apercu ? 'Modifier' : 'Aperçu',
-            icon: Icon(_apercu ? Icons.edit : Icons.visibility, color: texte),
-            onPressed: () => setState(() => _apercu = !_apercu),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: 480,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 240,
-              child: _apercu
-                  ? SingleChildScrollView(child: MarkdownBlock(data: _contenu.text, config: MarkdownConfig(configs: [PConfig(textStyle: TextStyle(color: texte))])))
-                  : TextField(
-                      controller: _contenu,
-                      autofocus: true,
-                      expands: true,
-                      maxLines: null,
-                      style: TextStyle(color: texte),
-                      cursorColor: texte,
-                      decoration: InputDecoration(
-                        hintText: 'Markdown accepté : **gras**, *italique*, # titre, - liste, [ ] case',
-                        hintStyle: TextStyle(color: texte.withValues(alpha: 0.6)),
-                        border: InputBorder.none,
                       ),
                     ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              children: [
-                for (final c in ThemeLulu.couleursPostIt)
-                  _PastilleCouleur(hex: c, choisie: c == _couleur, onTap: () => setState(() => _couleur = c)),
-                ActionChip(
-                  avatar: const Icon(Icons.palette_outlined, size: 18),
-                  label: const Text('Autre…'),
-                  onPressed: () async {
-                    final c = await choisirCouleur(context, fond);
-                    if (c != null) setState(() => _couleur = hexDepuisCouleur(c));
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text('Contraste du texte : ${contraste(texte, fond).toStringAsFixed(1)}:1 (minimum 4,5:1)',
-                style: TextStyle(color: texte, fontSize: 11)),
-          ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () async {
-            await depot.modifierChamps(_id, {'archive': widget.postIt['archive'] != true});
-            if (context.mounted) Navigator.pop(context);
-          },
-          child: Text(widget.postIt['archive'] == true ? 'Désarchiver' : 'Archiver', style: TextStyle(color: texte)),
-        ),
-        TextButton(
-          onPressed: () => showDialog<void>(context: context, builder: (_) => _Historique(_id)),
-          child: Text('Historique', style: TextStyle(color: texte)),
-        ),
-        if (IntegrationDesktop.captureDisponible)
-          TextButton(
-            onPressed: () => IntegrationDesktop.basculerPremierPlan(true),
-            child: Text('Garder au premier plan', style: TextStyle(color: texte)),
-          ),
-        FilledButton(
-          onPressed: () async {
-            await depot.modifierDonnees(_id, {'contenu': _contenu.text, 'couleurFond': _couleur});
-            if (context.mounted) Navigator.pop(context);
-          },
-          child: const Text('Enregistrer'),
-        ),
-      ],
     );
   }
 }
 
-class _PastilleCouleur extends StatelessWidget {
-  const _PastilleCouleur({required this.hex, required this.choisie, required this.onTap});
+/// Surlignage adapté aux post-it : on garde la couleur de texte (contraste garanti) et on
+/// marque l'occurrence par un fond teinté, du gras et un soulignement.
+class _TexteSurlignePostIt extends StatelessWidget {
+  const _TexteSurlignePostIt(this.texte, this.recherche, this.couleur);
 
-  final String hex;
-  final bool choisie;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        selected: choisie,
-        label: 'Couleur $hex',
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: couleurDepuisHex(hex),
-              shape: BoxShape.circle,
-              border: Border.all(color: choisie ? Colors.black : Colors.black26, width: choisie ? 3 : 1),
-            ),
-          ),
-        ),
-      );
-}
-
-/// Sélecteur de couleur libre (teinte, saturation, luminosité).
-Future<Color?> choisirCouleur(BuildContext context, Color initiale) {
-  var hsl = HSLColor.fromColor(initiale);
-  return showDialog<Color>(
-    context: context,
-    builder: (c) => StatefulBuilder(
-      builder: (c, setState) {
-        final couleur = hsl.toColor();
-        return AlertDialog(
-          title: const Text('Couleur du post-it'),
-          content: SizedBox(
-            width: 320,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  height: 64,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(8)),
-                  child: Text('Aperçu du texte', style: TextStyle(color: couleurTexte(couleur), fontSize: 18)),
-                ),
-                const SizedBox(height: 12),
-                Text('Teinte', style: Theme.of(c).textTheme.labelMedium),
-                Slider(value: hsl.hue, max: 360, onChanged: (v) => setState(() => hsl = hsl.withHue(v))),
-                Text('Saturation', style: Theme.of(c).textTheme.labelMedium),
-                Slider(value: hsl.saturation, onChanged: (v) => setState(() => hsl = hsl.withSaturation(v))),
-                Text('Luminosité', style: Theme.of(c).textTheme.labelMedium),
-                Slider(value: hsl.lightness, onChanged: (v) => setState(() => hsl = hsl.withLightness(v))),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(c), child: const Text('Annuler')),
-            FilledButton(onPressed: () => Navigator.pop(c, couleur), child: const Text('Choisir')),
-          ],
-        );
-      },
-    ),
-  );
-}
-
-/// C3 : historique des versions, restauration d'une ancienne version.
-class _Historique extends StatelessWidget {
-  const _Historique(this.postItId);
-
-  final String postItId;
+  final String texte;
+  final String recherche;
+  final Color couleur;
 
   @override
   Widget build(BuildContext context) {
-    final depot = context.noyau.depot;
-    return AlertDialog(
-      title: const Text('Historique des versions'),
-      content: SizedBox(
-        width: 460,
-        height: 400,
-        child: StreamBuilder<List<Enr>>(
-          stream: depot.versionsDe(postItId),
-          builder: (context, snap) {
-            final versions = (snap.data ?? [])..sort((a, b) => (b['creeLe'] as String? ?? '').compareTo(a['creeLe'] as String? ?? ''));
-            if (versions.isEmpty) {
-              return const Center(child: Text('Aucune version antérieure (l\'historique se remplit après synchronisation).'));
-            }
-            return ListView(
-              children: [
-                for (final v in versions)
-                  ListTile(
-                    title: Text(((v['donnees'] as Map)['contenu'] ?? '').toString(), maxLines: 3, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(dateCourte(v['creeLe'] as String?)),
-                    trailing: TextButton(
-                      onPressed: () async {
-                        final d = Map<String, Object?>.from(v['donnees'] as Map);
-                        await depot.modifierDonnees(postItId, {'contenu': d['contenu'], 'couleurFond': d['couleurFond']});
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          afficherMessage(context, 'Version restaurée.');
-                        }
-                      },
-                      child: const Text('Restaurer'),
-                    ),
-                  ),
-              ],
-            );
-          },
+    final reg = RegExp(RegExp.escape(recherche), caseSensitive: false);
+    final spans = <TextSpan>[];
+    var idx = 0;
+    for (final m in reg.allMatches(texte)) {
+      if (m.start > idx) spans.add(TextSpan(text: texte.substring(idx, m.start)));
+      spans.add(TextSpan(
+        text: m.group(0),
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          decoration: TextDecoration.underline,
+          decorationColor: couleur,
+          backgroundColor: couleur.withValues(alpha: 0.16),
         ),
-      ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer'))],
-    );
+      ));
+      idx = m.end;
+    }
+    if (idx < texte.length) spans.add(TextSpan(text: texte.substring(idx)));
+    return Text.rich(TextSpan(style: TextStyle(color: couleur, fontSize: 14), children: spans));
   }
 }

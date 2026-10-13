@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSP stricte : aucune ressource externe. connect-src = API LuluBoard (+ stockage LuluFiles pour les liens signés). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' http://127.0.0.1:8000 http://localhost:8000 https://lulufiles-api.onrender.com; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020617">
+  <title>Contenu partagé · LuluBoard</title>
+  <link rel="stylesheet" href="/l/style.css">
+  <script src="/l/config.js"></script>
+  <script src="/l/markdown.js" defer></script>
+  <script src="/l/app.js" defer></script>
+  <script src="/l/sodium.js" async></script>
+</head>
+<body>
+  <a class="lien-evitement" href="#contenu">Aller au contenu</a>
+  <header class="entete">
+    <a class="marque" id="lien-accueil" href="/">LuluBoard</a>
+    <span class="badge-chiffre">Chiffré de bout en bout</span>
+  </header>
+
+  <main id="contenu" class="principal" tabindex="-1">
+    <section id="etat" class="carte etat" aria-live="polite">
+      <div class="chargeur" aria-hidden="true"></div>
+      <p id="etat-message">Chargement du contenu partagé…</p>
+    </section>
+
+    <section id="formulaire-mdp" class="carte" hidden>
+      <h1 class="titre">Ce lien est protégé</h1>
+      <p class="texte-doux">Saisissez le mot de passe communiqué par la personne qui a partagé ce contenu. Il est vérifié sans jamais quitter votre appareil en clair.</p>
+      <form id="form-mdp" novalidate>
+        <label for="champ-mdp">Mot de passe</label>
+        <div class="ligne-champ">
+          <input id="champ-mdp" name="motDePasse" type="password" autocomplete="off" required aria-describedby="erreur-mdp">
+          <button type="submit" class="bouton bouton-principal" id="bouton-deverrouiller">Déverrouiller</button>
+        </div>
+        <p id="erreur-mdp" class="erreur" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <article id="resultat" class="carte" hidden></article>
+
+    <div id="actions-live" class="actions-live" hidden>
+      <span class="texte-doux" id="maj-texte">Contenu en direct : vous voyez sa dernière version.</span>
+      <button type="button" class="bouton bouton-secondaire" id="bouton-actualiser">Actualiser</button>
+    </div>
+  </main>
+
+  <footer class="pied">
+    <p><strong>Chiffré de bout en bout&nbsp;:</strong> le serveur LuluBoard ne peut pas lire ce contenu. Il est déchiffré uniquement dans votre navigateur.</p>
+    <p><a id="lien-accueil-pied" href="/">Découvrir LuluBoard</a></p>
+  </footer>
+</body>
+</html>

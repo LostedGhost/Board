@@ -58,7 +58,6 @@ dependencies:
   markdown_widget: ^2.3.2+8
   win32: ^6.4.0
   ffi: ^2.2.0
-  google_fonts: ^6.2.1
 
 dependency_overrides:
   # Correctif local du hook de compilation Windows (MSBuild 16 / VS 2019) — voir third_party/sodium.
@@ -87,11 +86,30 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # google_fonts met Rubik en cache ; pas de fichiers .ttf à embarquer manuellement.
+  # Polices embarquées (licence OFL, voir assets/fonts/OFL-*.txt) : rien n'est téléchargé au démarrage.
+  fonts:
+    - family: Rubik
+      fonts:
+        - asset: assets/fonts/Rubik-Regular.ttf
+        - asset: assets/fonts/Rubik-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Rubik-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Rubik-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Rubik-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Rubik-ExtraBold.ttf
+          weight: 800
+    - family: Itim
+      fonts:
+        - asset: assets/fonts/Itim-Regular.ttf
 
   assets:
     - assets/icone_tray.ico
     - assets/icone_tray.png
+    - assets/fonts/OFL-Rubik.txt
+    - assets/fonts/OFL-Itim.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:

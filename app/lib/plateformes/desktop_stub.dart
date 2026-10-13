@@ -8,4 +8,5 @@ class IntegrationDesktop {
   static bool get captureDisponible => false;
   static Future<void> definirPause(bool pause) async {}
   static Future<void> definirDemarrageAuto(bool actif) async {}
+  static Future<void> ouvrirDossier(String chemin) async {}
 }
