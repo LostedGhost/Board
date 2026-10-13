@@ -34,7 +34,7 @@ services:
       - key: MIN_APP_VERSION
         value: "0.1.0"
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://luluboard-site.onrender.com"
+        value: "https://luluboard-web.onrender.com,https://luluboard-site.onrender.com"
       # Premier administrateur de /admin/ (créé au premier démarrage).
       - key: DJANGO_SUPERUSER_EMAIL
         sync: false
@@ -80,6 +80,23 @@ services:
     rootDir: public
     buildCommand: ""
     staticPublishPath: .
+
+  # App Flutter Web (même code que l'APK), compilée par Render à chaque push.
+  - type: web
+    name: luluboard-web
+    runtime: static
+    rootDir: app
+    buildCommand: ./deploy/render_build_web.sh
+    staticPublishPath: build/web
+    envVars:
+      - key: FLUTTER_VERSION
+        value: "3.47.7"
+      - key: API_URL
+        value: "https://luluboard-api.onrender.com"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
 
 databases:
   - name: luluboard-db

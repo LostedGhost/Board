@@ -201,7 +201,7 @@ Lancer un worker en production : `uv run celery -A config worker -l info` (et `b
 
 ## Déploiement (Render)
 
-Le Blueprint `../render.yaml` crée l'API (`luluboard-api`), PostgreSQL (`luluboard-db`), Redis (`luluboard-redis`) et le site public (`luluboard-site`).
+Le Blueprint `../render.yaml` crée l'API (`luluboard-api`), PostgreSQL (`luluboard-db`), Redis (`luluboard-redis`), le site public (`luluboard-site`) et l'app web Flutter (`luluboard-web`, build : `app/deploy/render_build_web.sh`).
 Création : dashboard Render → *New* → *Blueprint* → dépôt `LostedGhost/Board` ; les secrets marqués `sync: false` sont demandés à ce moment-là.
 
 - Build : `deploy/render_build.sh` (`uv sync`, `collectstatic`).
