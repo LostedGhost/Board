@@ -1,7 +1,6 @@
 """Contrat 2.4 — compte, préférences, conditions."""
 
-from django.conf import settings
-from django.core.mail import send_mail
+from commun.courriels import envoyer_courriel
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
@@ -172,13 +171,16 @@ class EmailView(APIView):
         code = gestion.demander_changement_email(request.user, d["nouvelEmail"], d.get("motDePasse"), d.get("idTokenGoogle"))
         langue = langue_de(request)
         envoyer_code(d["nouvelEmail"], TypeCode.CHANGEMENT_EMAIL, code, langue)
-        send_mail(
-            "LuluBoard : changement d'adresse demandé" if langue == "fr" else "LuluBoard: address change requested",
-            "Un changement d'adresse e-mail a été demandé pour votre compte. Si ce n'est pas vous, changez votre mot de passe."
-            if langue == "fr"
-            else "An e-mail address change was requested for your account. If it wasn't you, change your password.",
-            settings.DEFAULT_FROM_EMAIL,
-            [request.user.email],
+        fr = langue == "fr"
+        envoyer_courriel(
+            request.user.email,
+            "LuluBoard : changement d'adresse demandé" if fr else "LuluBoard: address change requested",
+            "Changement d'adresse demandé" if fr else "Address change requested",
+            [
+                "Un changement d'adresse e-mail a été demandé pour votre compte. Si ce n'est pas vous, changez votre mot de passe."
+                if fr
+                else "An e-mail address change was requested for your account. If it wasn't you, change your password."
+            ],
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

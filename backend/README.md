@@ -53,6 +53,8 @@ uv run python manage.py spectacular --file ../docs/openapi.yaml
 | `LULUFILES_BASE_URL`, `LULUFILES_API_KEY` | mode LuluFiles |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID` | mode Telegram direct |
 | `MIN_APP_VERSION` | version minimale des apps clientes (I10) |
+| `BREVO_API_KEY` | clé API Brevo : si présente, les e-mails partent par l'API HTTP de Brevo (Render bloque le SMTP) |
+| `EMAIL_TIMEOUT` | délai maximal d'envoi d'un e-mail, en secondes (10 par défaut) |
 
 ## Endpoints livrés
 

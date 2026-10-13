@@ -4,8 +4,7 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
-from django.conf import settings
-from django.core.mail import send_mail
+from commun.courriels import envoyer_courriel
 from django.db import transaction
 from django.utils import timezone
 
@@ -35,11 +34,11 @@ def supprimer_definitivement(compte):
     email = compte.email
     with transaction.atomic():
         compte.delete()
-    send_mail(
+    envoyer_courriel(
+        email,
         "LuluBoard : votre compte a été supprimé",
-        "Votre compte et toutes vos données ont été définitivement supprimés.",
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
+        "Votre compte a été supprimé",
+        ["Votre compte et toutes vos données ont été définitivement supprimés.", "Merci d'avoir utilisé LuluBoard."],
         fail_silently=True,
     )
 
@@ -55,12 +54,15 @@ def gerer_inactivite():
     maintenant = timezone.now()
     actifs = Compte.objects.exclude(role=RoleCompte.ADMINISTRATEUR).exclude(statut=StatutCompte.EN_ATTENTE_VERIFICATION)
     for compte in actifs.filter(derniere_connexion_le__lt=maintenant - INACTIVITE, averti_inactivite_le__isnull=True)[:500]:
-        send_mail(
+        envoyer_courriel(
+            compte.email,
             "LuluBoard : votre compte va être supprimé",
-            "Vous ne vous êtes pas connecté depuis 12 mois. Sans connexion de votre part dans les 30 jours, "
-            "votre compte et toutes vos données seront supprimés.",
-            settings.DEFAULT_FROM_EMAIL,
-            [compte.email],
+            "Votre compte va bientôt être supprimé",
+            [
+                "Vous ne vous êtes pas connecté depuis 12 mois. Sans connexion de votre part dans les 30 jours, "
+                "votre compte et toutes vos données seront supprimés.",
+                "Pour le conserver, il suffit d'ouvrir LuluBoard et de vous connecter.",
+            ],
             fail_silently=True,
         )
         compte.averti_inactivite_le = maintenant

@@ -1,7 +1,7 @@
 """Contrat 2.11 — annonces, support, export."""
 
 from django.conf import settings
-from django.core.mail import send_mail
+from commun.courriels import envoyer_courriel
 from django.db.models import Q
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, inline_serializer
@@ -66,11 +66,13 @@ class SupportView(APIView):
             infos_techniques=d.get("infosTechniques") or None,
         )
         if settings.SUPPORT_EMAIL:
-            send_mail(
+            envoyer_courriel(
+                settings.SUPPORT_EMAIL,
                 "LuluBoard : nouvelle demande de support",
-                f"De : {d['emailContact']}\n\n{d['message']}\n\n--- Infos techniques ---\n{d.get('infosTechniques') or '-'}",
-                settings.DEFAULT_FROM_EMAIL,
-                [settings.SUPPORT_EMAIL],
+                "Nouvelle demande de support",
+                [f"De : {d['emailContact']}", d["message"]],
+                note=f"Infos techniques : {d.get('infosTechniques') or '-'}",
+                reponse_a=d["emailContact"],
                 fail_silently=True,
             )
         return Response(status=status.HTTP_201_CREATED)

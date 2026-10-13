@@ -1,20 +1,19 @@
 """Modération dans l'interface d'administration (I28) : décisions sur des métadonnées, jamais sur un contenu."""
 
-from django.conf import settings
 from django.contrib import admin, messages
-from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 
 from apps.appareils.models import Session
 from apps.comptes.models import StatutCompte
 from apps.moderation.models import Signalement, StatutSignalement, Suspension
+from commun.courriels import envoyer_courriel
 
 MOTIF_SUSPENSION_DEFAUT = "Contenu signalé et confirmé par la modération."
 
 
 def _informer_proprietaire(compte, sujet, corps):
-    send_mail(sujet, corps, settings.DEFAULT_FROM_EMAIL, [compte.email], fail_silently=True)
+    envoyer_courriel(compte.email, sujet, sujet.removeprefix("LuluBoard : "), [corps], fail_silently=True)
 
 
 @admin.register(Signalement)

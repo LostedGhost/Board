@@ -178,6 +178,14 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 EMAIL_FILE_PATH = env("EMAIL_FILE_PATH", "")  # backend « filebased » (scénario de bout en bout)
+EMAIL_TIMEOUT = int(env("EMAIL_TIMEOUT", "10"))  # un serveur d'envoi injoignable ne bloque plus la requête
+# Envoi par l'API HTTP de Brevo (EMAIL_BACKEND=commun.brevo.BrevoEmailBackend) : Render bloque le SMTP.
+BREVO_API_KEY = env("BREVO_API_KEY", "")
+if BREVO_API_KEY:
+    EMAIL_BACKEND = "commun.brevo.BrevoEmailBackend"  # la clé suffit : aucun autre réglage à changer
+# Adresses publiques utilisées dans les e-mails HTML (logo, lien vers le site).
+SITE_PUBLIC_URL = env("SITE_PUBLIC_URL", "https://luluboard-site.onrender.com")
+EMAIL_LOGO_URL = env("EMAIL_LOGO_URL", f"{SITE_PUBLIC_URL}/logo-mail.png")
 
 # Connexion Google (A1b) : identifiants OAuth des apps web, Android et iOS, séparés par des virgules.
 # Notifications push (FCM, HTTP v1) : identifiant du projet Firebase + fichier JSON du compte de service.
