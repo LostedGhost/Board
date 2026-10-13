@@ -180,7 +180,7 @@ EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 EMAIL_FILE_PATH = env("EMAIL_FILE_PATH", "")  # backend « filebased » (scénario de bout en bout)
 EMAIL_TIMEOUT = int(env("EMAIL_TIMEOUT", "10"))  # un serveur d'envoi injoignable ne bloque plus la requête
 # Envoi par l'API HTTP de Brevo (EMAIL_BACKEND=commun.brevo.BrevoEmailBackend) : Render bloque le SMTP.
-BREVO_API_KEY = env("BREVO_API_KEY", "")
+BREVO_API_KEY = env("BREVO_API_KEY", "").strip()  # tolère un espace ou un retour à la ligne collé avec la clé
 if BREVO_API_KEY:
     EMAIL_BACKEND = "commun.brevo.BrevoEmailBackend"  # la clé suffit : aucun autre réglage à changer
 # Adresses publiques utilisées dans les e-mails HTML (logo, lien vers le site).

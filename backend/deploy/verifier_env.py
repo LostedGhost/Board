@@ -34,3 +34,7 @@ print("[variables] manquantes :", ", ".join(manquantes) or "aucune")
 print("[variables] obsolètes encore définies (à supprimer) :", ", ".join(en_trop) or "aucune")
 if os.environ.get("DEFAULT_FROM_EMAIL"):
     print("[variables] expéditeur :", os.environ["DEFAULT_FROM_EMAIL"])
+cle = os.environ.get("BREVO_API_KEY", "").strip()
+if cle and not cle.startswith("xkeysib-"):
+    print("[variables] ATTENTION : BREVO_API_KEY ne commence pas par « xkeysib- » : ce n'est pas une clé API Brevo"
+          " (une clé SMTP commence par « xsmtpsib- » et ne fonctionne pas avec l'API).")
