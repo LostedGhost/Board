@@ -32,3 +32,4 @@ docs/openapi.yaml
 *.sqlite
 *.sqlite3
 livrables/
+dump.rdb
