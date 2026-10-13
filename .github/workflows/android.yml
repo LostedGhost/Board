@@ -34,6 +34,9 @@ jobs:
       # Adresse de l'API compilée dans l'app (variable de dépôt API_URL, sinon le service Render par défaut).
       - run: flutter build apk --release --dart-define=API_URL=${{ vars.API_URL || 'https://luluboard-api.onrender.com' }}
 
+      # APK léger pour les téléphones récents (arm64 uniquement), en plus de l'APK universel.
+      - run: flutter build apk --release --split-per-abi --target-platform android-arm64 --dart-define=API_URL=${{ vars.API_URL || 'https://luluboard-api.onrender.com' }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: luluboard-apk
@@ -46,8 +49,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk luluboard.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk luluboard-arm64.apk
           gh release delete apk-latest --yes --cleanup-tag || true
-          gh release create apk-latest luluboard.apk \
+          gh release create apk-latest luluboard.apk luluboard-arm64.apk \
             --prerelease --target "$GITHUB_SHA" \
             --title "LuluBoard Android (dernière build)" \
             --notes "APK construit depuis ${GITHUB_REF_NAME} (${GITHUB_SHA::7})."
