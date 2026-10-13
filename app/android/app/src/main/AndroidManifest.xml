@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Accès réseau (API, WebSocket) : absent par défaut des builds release Flutter. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="luluboard"
         android:name="${applicationName}"
