@@ -9,7 +9,7 @@ Page statique autonome : déchiffre dans le navigateur (libsodium sumo, `sodium.
 ## Déploiement
 - Réécriture obligatoire : `/l/*` → `/l/index.html` (ex. Nginx `location /l/ { try_files $uri /l/index.html; }`). Les ressources sont référencées en absolu (`/l/app.js`…).
 - Repli sans réécriture : `/l/?t=<jeton>#<clé>`.
-- `app/lib/noyau/config.dart` construit les URL sur `API_URL/l/<jeton>` : en prod, soit le backend (ou le proxy devant lui) sert ce dossier sous `/l/`, soit il faut faire pointer `lienPublic` vers le domaine qui l'héberge.
+- `app/lib/noyau/config.dart` construit les URL sur `SITE_URL/l/?t=<jeton>#<clé>` (forme sans réécriture) : `SITE_URL` est fourni à la compilation (CI Android, build web Render).
 - CORS : si la page n'est pas servie par la même origine que l'API, ajouter son origine à `CORS_ALLOWED_ORIGINS` du backend (ex. `https://luluboard.example`).
 - Servir avec `Referrer-Policy: no-referrer` et `Cache-Control: no-store` conseillés.
 

@@ -4,6 +4,6 @@
 // - accueilUrl : page d'accueil LuluBoard.
 // Pensez à garder la directive connect-src de la CSP (index.html) cohérente avec apiUrl.
 window.LULUBOARD_CONFIG = Object.freeze({
-  apiUrl: "http://127.0.0.1:8000",
+  apiUrl: "https://luluboard-api.onrender.com",
   accueilUrl: "/",
 });

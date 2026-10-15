@@ -8,7 +8,11 @@ class Config {
 
   static String get wsUrl => '${apiUrl.replaceFirst('http', 'ws')}/api/v1/ws';
 
-  /// Domaine des liens publics : la page /l/{jeton} est servie par le backend.
+  /// Site public qui héberge la page de consultation des liens (public/l/), distinct de l'API.
+  static const siteUrl = String.fromEnvironment('SITE_URL', defaultValue: 'http://127.0.0.1:5191');
+
+  /// Lien public : `/l/?t=<jeton>` fonctionne sur tout hébergeur statique, sans règle de réécriture.
+  /// La clé reste dans le fragment `#`, jamais envoyé au serveur.
   static String lienPublic(String jeton, {String? fragment}) =>
-      '$apiUrl/l/$jeton${fragment != null ? '#$fragment' : ''}';
+      '$siteUrl/l/?t=$jeton${fragment != null ? '#$fragment' : ''}';
 }

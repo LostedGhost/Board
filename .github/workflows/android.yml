@@ -32,10 +32,10 @@ jobs:
       - run: flutter pub get
 
       # Adresse de l'API compilée dans l'app (variable de dépôt API_URL, sinon le service Render par défaut).
-      - run: flutter build apk --release --dart-define=API_URL=${{ vars.API_URL || 'https://luluboard-api.onrender.com' }}
+      - run: flutter build apk --release --dart-define=API_URL=${{ vars.API_URL || 'https://luluboard-api.onrender.com' }} --dart-define=SITE_URL=${{ vars.SITE_URL || 'https://luluboard-site.onrender.com' }}
 
       # APK léger pour les téléphones récents (arm64 uniquement), en plus de l'APK universel.
-      - run: flutter build apk --release --split-per-abi --target-platform android-arm64 --dart-define=API_URL=${{ vars.API_URL || 'https://luluboard-api.onrender.com' }}
+      - run: flutter build apk --release --split-per-abi --target-platform android-arm64 --dart-define=API_URL=${{ vars.API_URL || 'https://luluboard-api.onrender.com' }} --dart-define=SITE_URL=${{ vars.SITE_URL || 'https://luluboard-site.onrender.com' }}
 
       - uses: actions/upload-artifact@v4
         with:

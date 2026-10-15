@@ -84,6 +84,8 @@ services:
         value: "3.47.7"
       - key: API_URL
         value: "https://luluboard-api.onrender.com"
+      - key: SITE_URL
+        value: "https://luluboard-site.onrender.com"
     routes:
       - type: rewrite
         source: /*

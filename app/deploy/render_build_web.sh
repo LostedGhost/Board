@@ -17,4 +17,4 @@ git config --global --add safe.directory "$CACHE/flutter"
 flutter config --no-analytics >/dev/null
 flutter pub get
 # --no-web-resources-cdn : CanvasKit est servi par notre site, pas par gstatic.com (même logique que D52).
-flutter build web --release --no-web-resources-cdn --dart-define=API_URL="${API_URL:?API_URL manquante}"
+flutter build web --release --no-web-resources-cdn --dart-define=API_URL="${API_URL:?API_URL manquante}" --dart-define=SITE_URL="${SITE_URL:?SITE_URL manquante}"
